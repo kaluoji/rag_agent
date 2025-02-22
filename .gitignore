@@ -1,3 +1,16 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
 .env
-venv
-__pycache__
+venv/
+
+# IDEs
+.vscode/
+.idea/
+
+# Streamlit
+.streamlit/
+
+# Otros
+*.log
