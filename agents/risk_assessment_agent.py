@@ -29,13 +29,12 @@ model = OpenAIModel(llm, api_key=settings.openai_api_key)
 
 logfire.configure(send_to_logfire='if-token-present')
 
-class RiskAssessmentDeps(BaseModel):
-    """Dependencias necesarias para el agente de evaluación de riesgos."""
-    supabase: Client
-    openai_client: AsyncOpenAI
-
-    class Config:
-        arbitrary_types_allowed = True
+class RiskMetrics(BaseModel):
+    """Métricas de riesgo para un área."""
+    impact_score: int = Field(..., ge=1, le=5)
+    probability_score: int = Field(..., ge=1, le=5)
+    risk_score: int = Field(..., ge=1, le=25)
+    control_effectiveness: int = Field(..., ge=1, le=5)
 
 class Vulnerability(BaseModel):
     """Vulnerabilidad con explicación detallada."""
@@ -84,6 +83,23 @@ class RiskAssessment(BaseModel):
     overall_risk_level: str = Field(..., description="Nivel de riesgo general")
     impacted_areas: List[ImpactedArea] = Field(..., description="Áreas impactadas")
     key_recommendations: List[Recommendation] = Field(..., description="Recomendaciones clave")
+
+# Llamadas a model_rebuild()
+RiskMetrics.model_rebuild()
+Vulnerability.model_rebuild()
+MitigationAction.model_rebuild()
+MonitoringRequirement.model_rebuild()
+Recommendation.model_rebuild()
+ImpactedArea.model_rebuild()
+RiskAssessment.model_rebuild()
+
+class RiskAssessmentDeps(BaseModel):
+    """Dependencias necesarias para el agente de evaluación de riesgos."""
+    supabase: Client
+    openai_client: AsyncOpenAI
+
+    class Config:
+        arbitrary_types_allowed = True
 
 
 system_prompt = """

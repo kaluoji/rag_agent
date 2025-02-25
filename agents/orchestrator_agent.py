@@ -69,6 +69,7 @@ Los agentes disponibles son:
    - Evaluación de impacto y probabilidad de riesgos regulatorios
    - Análisis de riesgos específicos del sector
    - Recomendaciones para mitigar riesgos de compliance
+   - Realización de GAP analysis con respecto la normativa de la BBDD
 
 3. **Agente de Informes (REPORT)** - Diseñado para generar informes estructurados. Ideal para:
    - Generación de informes en formato Word o PowerPoint
@@ -78,6 +79,7 @@ Los agentes disponibles son:
 - Debes determinar el agente más apropiado basándote en la intención principal de la consulta.
 - Si la consulta toca múltiples áreas, enfócate en la intención principal o el objetivo final del usuario.
 - Para consultas que soliciten explícitamente evaluación de riesgos por sector o análisis de áreas impactadas, prioriza el agente RISK_ASSESSMENT.
+- Para consultas que requieran realizar un GAP analysis con respecto la normativa de la BBDD, prioriza el agente COMPLIANCE.
 - Para consultas generales sobre normativas o dudas de compliance, prioriza el agente COMPLIANCE.
 - Para solicitudes explícitas de generación de informes, prioriza el agente REPORT.
 
