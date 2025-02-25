@@ -4,6 +4,7 @@ import asyncio
 import json
 import os
 import sys
+import PyPDF2
 
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 if project_root not in sys.path:
@@ -36,47 +37,76 @@ st.set_page_config(
     layout="wide"
 )
 
-# Estilos CSS básicos y de personalización
+# Estilos CSS
+
 st.markdown("""
 <style>
-    /* Estilo para el input de chat */
-    .stTextInput > div > div > input {
-        padding: 15px;
-        border-radius: 15px;
-        background-color: #f0f2f6;
-        border: none;
-    }
-    /* Ocultar elementos predeterminados de Streamlit */
-    .stDeployButton, #MainMenu, footer {
-        display: none !important;
-    }
-    /* Estilos del sidebar */
-    .sidebar-header {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        margin-bottom: 20px;
-        padding: 10px 0;
-    }
-    /* Estilo para el modo experto */
-    .risk-assessment {
-        background-color: #f8f9fa;
-        border-left: 4px solid #8B0D18;
-        padding: 15px;
-        margin: 10px 0;
-        border-radius: 4px;
-    }
+    /* Estilos existentes ... */
+    
+    /* Estilos para el informe de riesgos */
     .risk-area {
-        margin-bottom: 10px;
-        padding: 10px;
-        border-radius: 4px;
-        background-color: #fff;
-        border: 1px solid #e0e0e0;
+        margin-bottom: 20px;
+        padding: 15px;
+        border-radius: 8px;
+        background-color: #ffffff;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
+    
+    .risk-area h4 {
+        margin-top: 0;
+        margin-bottom: 15px;
+        color: #333;
+        font-size: 1.2em;
+    }
+    
+    .risk-area ul {
+        margin-bottom: 15px;
+        padding-left: 20px;
+    }
+    
+    .risk-area li {
+        margin-bottom: 10px;
+        line-height: 1.5;
+    }
+    
     .risk-low { border-left: 4px solid #28a745; }
     .risk-medium { border-left: 4px solid #ffc107; }
     .risk-high { border-left: 4px solid #fd7e14; }
     .risk-critical { border-left: 4px solid #dc3545; }
+    
+    .risk-area strong {
+        color: #444;
+    }
+    
+    .risk-area em {
+        color: #666;
+        font-style: italic;
+    }
+
+    .citation {
+    margin: 15px 0;
+    padding: 12px 15px;
+    border-left: 4px solid #8B0D18;
+    background-color: #ffffff;
+    border-radius: 4px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+
+    .citation em {
+        font-style: italic;
+        color: #555;
+    }
+
+    .blockquote-citation {
+        margin: 20px 0;
+        padding: 15px;
+        background-color: #ffffff;
+        border-left: 4px solid #8B0D18;
+        border-radius: 4px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        font-style: italic;
+        color: #555;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -146,53 +176,100 @@ def display_message_part(part):
             st.markdown(part.content)
     elif part.part_kind == 'text':
         with st.chat_message("assistant", avatar=f"data:image/png;base64,{get_base64_of_bin_file('assets/logo.png')}"):
-            st.markdown(part.content)
+            # Procesamos el contenido para formatear correctamente las citas
+            content = process_citations(part.content)
+            st.markdown(content, unsafe_allow_html=True)
+
+def process_citations(content):
+    """
+    Procesa el contenido para dar formato adecuado a las citas.
+    Convierte etiquetas HTML específicas y formatea las citas correctamente.
+    """
+    import re
+    
+    # Reemplazar <strong>Cita:</strong> <em>"texto"</em> con un formato especial
+    content = re.sub(
+        r'<strong>Cita:</strong>\s*<em>"(.+?)"</em>',
+        r'<div class="citation"><strong>Cita:</strong> <em>"\1"</em></div>',
+        content
+    )
+    
+    # Reemplazar <blockquote><em>"texto"</em></blockquote> con un formato especial
+    content = re.sub(
+        r'<blockquote><em>"(.+?)"</em></blockquote>',
+        r'<div class="blockquote-citation"><em>"\1"</em></div>',
+        content
+    )
+    
+    return content
 
 def display_risk_assessment(risk_data: RiskAssessment):
     """Muestra una evaluación de riesgos formateada en la interfaz."""
     with st.chat_message("assistant", avatar=f"data:image/png;base64,{get_base64_of_bin_file('assets/logo.png')}"):
-        st.markdown(f"## Evaluación de Riesgos: {risk_data.sector}")
+        st.markdown(f"# Evaluación de Riesgos: {risk_data.sector}")
         
         # Mostrar marco regulatorio si existe
-        if hasattr(risk_data, 'regulatory_framework') and risk_data.regulatory_framework:
-            st.markdown(f"**Marco regulatorio:** {', '.join(risk_data.regulatory_framework)}")
+        if risk_data.regulatory_framework:
+            st.markdown("## Marco Regulatorio")
+            for reg in risk_data.regulatory_framework:
+                st.markdown(f"- {reg}")
             
-        st.markdown(f"**Nivel de riesgo general:** {risk_data.overall_risk_level}")
+        st.markdown(f"## Nivel de Riesgo General: {risk_data.overall_risk_level}")
         
         # Mostrar áreas impactadas
-        st.markdown("### Áreas Impactadas")
+        st.markdown("## Áreas Impactadas")
         for area in risk_data.impacted_areas:
-            risk_class = ""
-            if area.impact_level == "Bajo":
-                risk_class = "risk-low"
-            elif area.impact_level == "Medio":
-                risk_class = "risk-medium"
-            elif area.impact_level == "Alto":
-                risk_class = "risk-high"
-            elif area.impact_level == "Crítico":
-                risk_class = "risk-critical"
+            st.markdown("---")  # Separador visual
             
-            st.markdown(f"""
-            <div class="risk-area {risk_class}">
-                <h4>{area.name}</h4>
-                <p><strong>Impacto:</strong> {area.impact_level} | <strong>Probabilidad:</strong> {area.probability}</p>
-                <p>{area.description}</p>
-                <p><strong>Vulnerabilidades principales:</strong></p>
-                <ul>
-                    {"".join([f"<li>{vuln}</li>" for vuln in area.key_vulnerabilities])}
-                </ul>
-                <p><strong>Acciones de mitigación:</strong></p>
-                <ul>
-                    {"".join([f"<li>{action}</li>" for action in area.mitigation_actions])}
-                </ul>
-            </div>
-            """, unsafe_allow_html=True)
+            # Encabezado del área
+            st.markdown(f"### {area.name}")
+            st.markdown(f"**Nivel de Impacto:** {area.impact_level}")
+            st.markdown(f"**Probabilidad:** {area.probability}")
+            st.markdown(area.description)
+            
+            # Vulnerabilidades
+            if area.key_vulnerabilities:
+                st.markdown("#### Vulnerabilidades Principales")
+                for vuln in area.key_vulnerabilities:
+                    st.markdown(f"""
+* **{vuln.title}**
+  - *Descripción:* {vuln.description}
+  - *Análisis de Impacto:* {vuln.impact_analysis}
+  - *Factores de Riesgo:* {vuln.risk_factors}
+""")
+            
+            # Acciones de mitigación
+            if area.mitigation_actions:
+                st.markdown("#### Acciones de Mitigación")
+                for action in area.mitigation_actions:
+                    st.markdown(f"""
+* **{action.title}**
+  - *Descripción:* {action.description}
+  - *Detalles de Implementación:* {action.implementation_details}
+  - *Beneficios Esperados:* {action.expected_benefits}
+""")
+            
+            # Requisitos de monitorización
+            if area.monitoring_requirements:
+                st.markdown("#### Requisitos de Monitorización")
+                for req in area.monitoring_requirements:
+                    st.markdown(f"""
+* **{req.title}**
+  - *Descripción:* {req.description}
+  - *Guía de Implementación:* {req.implementation_guide}
+  - *Criterios de Éxito:* {req.success_criteria}
+""")
         
         # Mostrar recomendaciones clave
         if risk_data.key_recommendations:
-            st.markdown("### Recomendaciones Clave")
+            st.markdown("## Recomendaciones Clave")
             for i, rec in enumerate(risk_data.key_recommendations, 1):
-                st.markdown(f"{i}. {rec}")
+                st.markdown(f"""
+#### {i}. {rec.title}
+- **Descripción:** {rec.description}
+- **Justificación:** {rec.rationale}
+- **Resultado esperado:** {rec.expected_outcome}
+""")
 
 def clear_old_messages():
     """Mantiene sólo los últimos mensajes para evitar acumulaciones excesivas."""
@@ -202,8 +279,22 @@ def clear_old_messages():
         if st.session_state.current_chat_id:
             st.session_state.chat_history[st.session_state.current_chat_id] = st.session_state.messages.copy()
 
+def extract_text_from_pdf(pdf_path: str) -> str:
+    """Extrae el texto de un archivo PDF y lo retorna."""
+    try:
+        with open(pdf_path, "rb") as f:
+            reader = PyPDF2.PdfReader(f)
+            text = ""
+            for page in reader.pages:
+                page_text = page.extract_text()
+                if page_text:
+                    text += page_text + "\n"
+            return text
+    except Exception as e:
+        return f"Error al extraer texto del PDF: {str(e)}"
+
 async def process_user_query(user_input: str):
-    """Procesa la consulta del usuario a través del orquestador."""
+    """Procesa la consulta del usuario a través del orquestador e integra el contenido de documentos adjuntos."""
     clear_old_messages()
     
     deps = OrchestratorDeps(
@@ -211,28 +302,48 @@ async def process_user_query(user_input: str):
         openai_client=openai_client
     )
     
+    # Integrar documentos adjuntos en la consulta
+    documents_context = ""
+    if "documents" in st.session_state and st.session_state["documents"]:
+        documents_context += "\n\n### Documentos Adjuntos:\n"
+        for doc in st.session_state["documents"]:
+            try:
+                # Si el documento es un PDF, extrae el texto; de lo contrario, intenta leerlo como texto
+                if doc["name"].lower().endswith(".pdf") or doc["type"] == "application/pdf":
+                    content = extract_text_from_pdf(doc["path"])
+                else:
+                    with open(doc["path"], "r", encoding="utf-8", errors="ignore") as f:
+                        content = f.read()
+                
+                # Limitar el contenido a 1000 caracteres para no exceder límites de tokens
+                max_chars = 1000
+                if len(content) > max_chars:
+                    content = content[:max_chars] + "...\n"
+                documents_context += f"\n**{doc['name']}**:\n{content}\n"
+            except Exception as e:
+                documents_context += f"\n**{doc['name']}**: Error al leer el contenido: {str(e)}\n"
+    
+    # Combinar la consulta original con el contexto extraído de los documentos
+    final_query = user_input + documents_context
+
     with st.spinner("Procesando tu consulta..."):
-        # Mostrar un indicador de procesamiento mientras se analiza la consulta
-        result = await process_query(user_input, deps)
+        result = await process_query(final_query, deps)
         
-        # Crear una respuesta adaptada al tipo de agente utilizado
         if result.agent_used == AgentType.RISK_ASSESSMENT:
-            # Para mostrar evaluaciones de riesgo con formato especial
             display_risk_assessment(result.response)
-            # Almacenar la respuesta como texto para el historial
             response_text = f"Evaluación de Riesgos para el sector: {result.response.sector}"
         else:
-            # Para respuestas de compliance o informes
             st.markdown(result.response)
             response_text = result.response
         
-        # Guardar los mensajes en el historial
+        # Guardar la conversación en el historial
         user_message = ModelRequest(parts=[UserPromptPart(content=user_input)])
         assistant_message = ModelResponse(parts=[TextPart(content=response_text)])
         
         st.session_state.messages.extend([user_message, assistant_message])
         if st.session_state.current_chat_id:
             st.session_state.chat_history[st.session_state.current_chat_id] = st.session_state.messages.copy()
+
 
 def set_custom_style():
     st.markdown("""
@@ -246,7 +357,8 @@ def set_custom_style():
             color: #8B0D18;
             background-color: transparent;
             border: none;
-            padding: 12px;
+            padding: 20px;
+            margin-top: 2px;
             cursor: pointer;
             font-size: 16px;
             transition: all 0.2s ease;
@@ -287,6 +399,59 @@ def sidebar():
                     if st.button("🗑️", key=f"delete_{chat_id}", help="Eliminar chat"):
                         delete_chat(chat_id)
 
+def handle_document_upload():
+    """
+    Maneja la carga de documentos y los procesa para su uso en el sistema.
+    Devuelve una lista de documentos procesados si se cargan correctamente.
+    """
+    st.sidebar.markdown("## Adjuntar Documentos")
+    
+    uploaded_files = st.sidebar.file_uploader(
+        "Sube documentos relevantes para el análisis",
+        accept_multiple_files=True,
+        type=["pdf", "docx", "txt", "csv", "xlsx"]
+    )
+    
+    if not uploaded_files:
+        return None
+    
+    documents = []
+    
+    with st.sidebar.expander("Documentos cargados", expanded=True):
+        for uploaded_file in uploaded_files:
+            # Mostrar información del archivo
+            file_details = {
+                "Nombre": uploaded_file.name,
+                "Tipo": uploaded_file.type,
+                "Tamaño": f"{uploaded_file.size / 1024:.2f} KB"
+            }
+            
+            st.write(f"**{file_details['Nombre']}**")
+            st.write(f"Tipo: {file_details['Tipo']} | Tamaño: {file_details['Tamaño']}")
+            
+            # Guardar temporalmente el archivo
+            try:
+                temp_file_path = os.path.join("temp_files", uploaded_file.name)
+                os.makedirs(os.path.dirname(temp_file_path), exist_ok=True)
+                
+                with open(temp_file_path, "wb") as f:
+                    f.write(uploaded_file.getbuffer())
+                
+                doc_info = {
+                    "name": uploaded_file.name,
+                    "path": temp_file_path,
+                    "type": uploaded_file.type
+                }
+                
+                documents.append(doc_info)
+                st.success(f"✅ Documento guardado: {uploaded_file.name}")
+            except Exception as e:
+                st.error(f"❌ Error al procesar {uploaded_file.name}: {str(e)}")
+    
+    return documents if documents else None
+
+
+
 async def main():
     set_custom_style()
     # Mostrar logo en la parte superior cuando el sidebar esté colapsado
@@ -298,6 +463,11 @@ async def main():
     )
     initialize_session_state()
     sidebar()
+      # Integración del manejo de carga de documentos
+    documents = handle_document_upload()
+    if documents:
+        st.session_state["documents"] = documents
+
     st.title("AgentIA")
     
     # Mostrar los mensajes de la conversación actual
