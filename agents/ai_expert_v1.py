@@ -91,12 +91,14 @@ Tu misión es responder consultas regulatorias con información precisa, detalla
 - **retrieve_detailed_information**: Obtén una vista granular y profunda de la documentación cuando se requieran aclaraciones o detalles técnicos específicos.
 - **cross_reference_information**: Conecta la consulta regulatoria con contenido relacionado almacenado en la base de datos, asegurando la coherencia y el contexto entre diferentes normativas.
 - **generate_report**: Genera informes estructurados y detallados sobre cumplimiento, auditorías o evaluaciones de riesgos en materia de protección de datos. El informe puede ser generado en formato Word o en formato PPT, según se especifique en la consulta. Esta herramienta se invoca únicamente si la consulta lo solicita explícitamente (por ejemplo, “Genera un informe en PPT”, “Elabora un reporte en Word”, etc.).
+- **perform_gap_analysis**: Realiza un análisis GAP de la política proporcionada en comparación con la normativa de protección de datos.
 
 **Flujo de Trabajo:**
 - **Para resúmenes o visiones generales:** Utiliza *retrieve_relevant_documentation* para extraer y resumir los puntos clave.
 - **Para detalles técnicos o explicaciones paso a paso:** Utiliza *retrieve_detailed_information* y organiza la respuesta en secciones numeradas o en viñetas.
 - **Para conectar información regulatoria relacionada:** Utiliza *cross_reference_information* para establecer enlaces contextuales entre diferentes normativas.
 - **Para la generación de informes:** Llama a *generate_report* solo cuando la consulta incluya instrucciones explícitas para ello, y asegúrate de generar el informe en el formato solicitado (Word o PPT).
+- **Para el análisis GAP:** Llama a *perform_gap_analysis* cuando la consulta requiera un análisis GAP detallado de la política proporcionada en comparación con la normativa de protección de datos.
 
 **Notas Importantes:**
 - Responde exclusivamente a consultas sobre regulación de protección de datos, leyes de privacidad y asuntos de cumplimiento normativo.
@@ -259,8 +261,8 @@ async def retrieve_detailed_information(ctx: RunContext[AIDeps], user_query: str
                     f"## {doc['title']}\n\n"
                     f"<strong>Summary:</strong> <em>{doc.get('summary', 'No disponible')}</em>\n\n"
                     f"<strong>Metadata:</strong> <em>{doc.get('metadata', 'No disponible')}</em>\n\n"
-                    f"<strong>Cita:</strong> <em>{doc.get('literal_quote','No disponible')}</em>\n\n"
-                    f"<strong>Cita:</strong>\n<blockquote><em>{doc.get('content', 'No disponible')}</em></blockquote>\n\n"
+                    f"<strong>Cita:</strong> <em>\"{doc.get('literal_quote','No disponible')}\"</em>\n\n"
+                    f"<strong>Cita:</strong>\n<blockquote><em>\"{doc.get('content', 'No disponible')}\"</em></blockquote>\n\n"
                     f"<strong>URL:</strong> <em>{doc.get('url', 'No disponible')}</em>\n\n"
                     f"{doc['content']}\n"
                 )
@@ -301,24 +303,72 @@ async def retrieve_detailed_information(ctx: RunContext[AIDeps], user_query: str
         logger.error(f"Error recuperando información detallada: {str(e)}")
         return f"Lo siento, ocurrió un error al recuperar la información detallada: {str(e)}"
 
-
-@ai_expert.tool
-async def generate_compliance_report(ctx: RunContext[AIDeps], compliance_output: str, template: str = None) -> str:
+#@ai_expert.tool
+#async def generate_compliance_report(ctx: RunContext[AIDeps], compliance_output: str, template: str = None) -> str:
     # Verifica que se proporcione un output válido
-    if not compliance_output or compliance_output.strip() == "":
-        return "Por favor, proporciona el output completo del agente de Compliance para generar el informe."
+#    if not compliance_output or compliance_output.strip() == "":
+#        return "Por favor, proporciona el output completo del agente de Compliance para generar el informe."
     
     # Combina el output de Compliance y la plantilla (si existe)
-    query = compliance_output
-    if template:
-        query += f"\n\nUtiliza la siguiente plantilla para el reporte:\n{template}"
+#    query = compliance_output
+#    if template:
+#        query += f"\n\nUtiliza la siguiente plantilla para el reporte:\n{template}"
     
     # Llama al agente de Reports sin el parámetro 'tool_name'
-    report_result = await report_agent.run(
-        query,
-        deps=ReportDeps(openai_client=ctx.deps.openai_client),
-        usage=ctx.usage
-    )
-    return report_result.data
+#    report_result = await report_agent.run(
+#        query,
+#        deps=ReportDeps(openai_client=ctx.deps.openai_client),
+#        usage=ctx.usage
+#    )
+#    return report_result.data
 
+@ai_expert.tool
+async def perform_gap_analysis(ctx: RunContext[AIDeps], policy_text: str) -> str:
+    """
+    Realiza un análisis GAP de la política proporcionada en comparación con la normativa de protección de datos.
+    
+    El análisis debe cumplir con las mejores prácticas de un GAP analysis, incluyendo:
+      - **Resumen del estado actual:** Descripción breve de la política evaluada.
+      - **Identificación de brechas:** Enumeración de los aspectos en que la política no cumple con la normativa.
+      - **Impacto:** Evaluación del impacto de cada brecha identificada.
+      - **Recomendaciones:** Propuestas de acciones específicas para cerrar cada brecha.
+      - **Priorización:** Orden de prioridad para la implementación de las acciones recomendadas.
+    
+    **Política a evaluar:**
+    {policy_text}
+    
+    Por favor, genera un análisis GAP detallado y estructurado en formato Markdown.
+    """
+    try:
+        prompt = f"""Realiza un análisis GAP detallado (mínimo 5.000 palabras) de la siguiente política en comparación con la normativa de protección de datos. El análisis debe cumplir con las mejores prácticas de un GAP analysis, que incluya:
+        
+        1. **Resumen del estado actual:** Una breve descripción de la política evaluada.
+        2. **Identificación de brechas:** Enumeración y descripción de los aspectos donde la política no cumple con la normativa.
+        3. **Impacto:** Evaluación del impacto potencial de cada brecha identificada.
+        4. **Área impactada:** Identificación del área o departamento afectado por cada brecha.
+        5. **Recomendaciones:** Propuestas de acciones específicas para cerrar cada brecha.
+        6. **Priorización:** Orden de prioridad de las acciones recomendadas.
+        
+        Asegúrate de estructurar el análisis de forma clara y ordenada, utilizando encabezados y listas cuando sea apropiado.
+        Asegurate de asignar un identificador (ID) a cada GAP detectado.
+        **Política a evaluar:**
+        {policy_text}
+        """
+        # Utilizar el modelo para generar el análisis GAP
+        response = await ctx.deps.openai_client.chat.completions.create(
+                model=llm,
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0.3,
+                max_tokens=3000
+            )
+            
+        # Extraer el contenido de la respuesta
+        gap_analysis = response.choices[0].message.content
+            
+        logger.info("GAP analysis completado con éxito")
+        return gap_analysis
+            
+    except Exception as e:
+        logger.error(f"Error realizando GAP analysis: {str(e)}")
+        return f"Lo siento, ocurrió un error al realizar el análisis de brechas: {str(e)}"
 # ===================== FIN DE LAS HERRAMIENTAS DEL AGENTE =====================
