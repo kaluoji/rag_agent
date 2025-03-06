@@ -29,7 +29,7 @@ class AgentType(str, Enum):
     COMPLIANCE = "compliance"
     RISK_ASSESSMENT = "risk_assessment"
     REPORT = "report"
-    UNKNOWN = "unknown"
+    
 
 class OrchestratorDeps(BaseModel):
     """Dependencias necesarias para el agente orquestador."""
@@ -52,45 +52,42 @@ class OrchestrationResult(BaseModel):
     additional_info: Optional[Dict[str, Any]] = None
 
 system_prompt = """
-Eres un agente orquestador altamente eficiente que coordina entre múltiples agentes especializados en el área de compliance y protección de datos.
+Eres un agente orquestador encargado de coordinar múltiples agentes especializados en medios de pago y en las reglas de Visa y Mastercard. Tu objetivo principal es:
 
-Tu función principal es analizar la consulta del usuario, determinar qué agente especializado es el más adecuado para manejarla, y dirigirla al agente correspondiente.
+Analizar la consulta del usuario para identificar su intención principal.
+Determinar cuál de los agentes disponibles es el más adecuado para atenderla.
+Proporcionar tu nivel de confianza (entre 0.0 y 1.0) en dicha selección.
+Identificar parámetros o información adicional para el agente elegido (si aplica).
+Agente disponible:
 
-Los agentes disponibles son:
+Agente de Compliance (COMPLIANCE)
+Experto en normativas de cumplimiento (compliance), especializado en reglas de Visa y Mastercard.
+Ideal para:
+Consultas sobre reglas de Visa/Mastercard.
+Explicaciones de obligaciones regulatorias.
+Dudas específicas sobre cumplimiento normativo.
+Generación de informes relacionados con normas y regulaciones.
+Traductor de idioma en caso de que la consulta esté en un idioma diferente al español.
 
-1. **Agente de Compliance (COMPLIANCE)** - Experto en regulación de protección de datos y normativas de privacidad. Ideal para:
-   - Consultas sobre leyes específicas (RGPD, LOPDGDD, etc.)
-   - Explicaciones de obligaciones regulatorias
-   - Respuestas a dudas específicas sobre cumplimiento normativo
-   - Generación de informes sobre normativas
+Agente de Evaluación de Riesgos (RISK_ASSESSMENT) – Especialista en analizar riesgos por sector. Ideal para:
+Identificación de áreas de riesgo en una empresa
+Evaluación de impacto y probabilidad de riesgos regulatorios
+Análisis de riesgos específicos del sector
+Recomendaciones para mitigar riesgos de compliance
+Realización de GAP analysis con respecto a la información de la BBDD
 
-2. **Agente de Evaluación de Riesgos (RISK_ASSESSMENT)** - Especialista en analizar riesgos por sector. Ideal para:
-   - Identificación de áreas de riesgo en una empresa
-   - Evaluación de impacto y probabilidad de riesgos regulatorios
-   - Análisis de riesgos específicos del sector
-   - Recomendaciones para mitigar riesgos de compliance
-   - Realización de GAP analysis con respecto la normativa de la BBDD
+Instrucciones Clave:
+Enfócate en la intención principal de la consulta.
+Si la consulta toca varias áreas, prioriza la necesidad más relevante o el objetivo final del usuario.
+Si la consulta requiere un GAP analysis respecto a la normativa de BBDD, selecciona siempre al Agente COMPLIANCE.
+Para consultas generales sobre reglas de Visa o Mastercard, prioriza igualmente al Agente COMPLIANCE.
+Para consultas que soliciten explícitamente evaluación de riesgos por sector o análisis de áreas impactadas, prioriza el agente RISK_ASSESSMENT.
 
-3. **Agente de Informes (REPORT)** - Diseñado para generar informes estructurados. Ideal para:
-   - Generación de informes en formato Word o PowerPoint
-   - Estructuración formal de hallazgos y recomendaciones
-
-**IMPORTANTE**:
-- Debes determinar el agente más apropiado basándote en la intención principal de la consulta.
-- Si la consulta toca múltiples áreas, enfócate en la intención principal o el objetivo final del usuario.
-- Para consultas que soliciten explícitamente evaluación de riesgos por sector o análisis de áreas impactadas, prioriza el agente RISK_ASSESSMENT.
-- Para consultas que requieran realizar un GAP analysis con respecto la normativa de la BBDD, prioriza el agente COMPLIANCE.
-- Para consultas generales sobre normativas o dudas de compliance, prioriza el agente COMPLIANCE.
-- Para solicitudes explícitas de generación de informes, prioriza el agente REPORT.
-
-**Tu tarea es:**
-1. Analizar la consulta para identificar la intención principal
-2. Determinar qué agente especializado es el más apropiado
-3. Proporcionar el nivel de confianza en tu decisión (de 0.0 a 1.0)
-4. Identificar parámetros específicos para el agente seleccionado (si aplica)
-
-No respondas directamente a la consulta. Tu única función es dirigir la consulta al agente especializado adecuado.
+Importante:
+No respondas directamente la consulta del usuario.
+Tu única función es redirigir la consulta al agente especializado adecuado.
 """
+
 
 orchestrator_agent = Agent(
     model=model,
@@ -103,6 +100,15 @@ async def route_to_agent(agent_info: AgentInfo, deps: OrchestratorDeps, query: s
     """
     Enruta la consulta al agente adecuado según el análisis del orquestador.
     """
+    # Verificación para consultas en inglés
+    english_keywords = ["what", "how", "when", "where", "who", "why", "which", "is", "are", "can", "could", "do", "does"]
+    is_english = any(keyword.lower() in query.lower().split() for keyword in english_keywords)
+    
+    # Forzar redirección a COMPLIANCE para todas las consultas en inglés
+    if is_english and agent_info.agent_type != AgentType.COMPLIANCE:
+        logger.warning(f"ORQUESTADOR: Consulta en inglés detectada, redirigiendo de {agent_info.agent_type} a COMPLIANCE")
+        agent_info.agent_type = AgentType.COMPLIANCE
+
     logger.info(f"Enrutando consulta al agente: {agent_info.agent_type} (confianza: {agent_info.confidence})")
     
     # Crear las dependencias para el agente de compliance
@@ -174,17 +180,25 @@ async def process_query(query: str, deps: OrchestratorDeps) -> OrchestrationResu
     Returns:
         OrchestrationResult: Resultado de la ejecución del agente seleccionado
     """
+    # Log de la consulta original recibida
+    logger.info("=" * 50)
+    logger.info(f"ORQUESTADOR: Consulta recibida: {query[:100]}..." if len(query) > 100 else query)
+    logger.info("=" * 50)
+    
     # El orquestador analiza la consulta y determina qué agente debe manejarla
+    logger.info("ORQUESTADOR: Analizando consulta con el agente orquestador...")
     orchestration_result = await orchestrator_agent.run(
         query,
         deps=deps
     )
     
     agent_info = orchestration_result.data
-    logger.info(f"Agente seleccionado: {agent_info.agent_type} con confianza: {agent_info.confidence}")
+    logger.info(f"ORQUESTADOR: Decisión del orquestador - Agente seleccionado: {agent_info.agent_type} con confianza: {agent_info.confidence}")
     
-    # Si la confianza es baja, podríamos implementar una lógica adicional
-    # Por ejemplo, solicitar más información al usuario
+    # Log de parámetros adicionales identificados por el orquestador
+    if agent_info.query_parameters:
+        logger.info(f"ORQUESTADOR: Parámetros detectados: {agent_info.query_parameters}")
     
     # Redirigimos la consulta al agente especializado
+    logger.info(f"ORQUESTADOR: Redirigiendo consulta al agente {agent_info.agent_type}...")
     return await route_to_agent(agent_info, deps, query)

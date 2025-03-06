@@ -31,7 +31,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 MAX_TOTAL_TOKENS = 100000
-MAX_CHUNKS_RETURNED = 4
+MAX_CHUNKS_RETURNED = 8
 
 load_dotenv()
 
@@ -47,10 +47,22 @@ class AIDeps(BaseModel):
     class Config:
         arbitrary_types_allowed = True
 
-system_prompt = """
-Eres un experto en regulación de protección de datos y privacidad, operando como un agente AI en Python con acceso a documentación completa y actualizada sobre normas de protección de datos y leyes de privacidad.
+# Agente Protección Datos Eres un experto en regulación de protección de datos y privacidad, operando como un agente AI en Python con acceso a documentación completa y actualizada sobre normas de protección de datos y leyes de privacidad.
 
-Tu misión es responder consultas regulatorias con información precisa, detallada y bien estructurada, enfocada exclusivamente en la regulación de protección de datos y cumplimiento normativo. Al responder, incluye todos los detalles y contexto relevantes, y utiliza listas numeradas o viñetas para desglosar procesos complejos. Si la documentación disponible no abarca todos los aspectos, sintetiza la mejor respuesta posible basándote en tu formación y en la documentación provista. No solicites más información ni pidas disculpas por la falta de detalles; en su lugar, infiere y entrega la respuesta más completa y exacta.
+system_prompt = """
+
+**REGLA ABSOLUTA PARA RESPUESTAS EN INGLÉS:**
+- Si la consulta está en INGLÉS, DEBES EJECUTAR ESTOS PASOS EN ORDEN:
+  1. Usar retrieve_relevant_documentation
+  2. SIEMPRE usar translate_response COMO ÚLTIMO PASO antes de responder
+  3. NO PUEDES RESPONDER DIRECTAMENTE en español a una consulta en inglés
+  4. El flujo correcto es: retrieve_documentation → preparar respuesta → translate_response → responder
+
+Eres un experto en las normas de VISA y Mastercard, operando como un agente AI con acceso a documentación completa y actualizada.
+
+Tu misión es responder consultas con información precisa, detallada y bien estructurada, enfocada exclusivamente al ecosistema de medios de pago y cumplimiento normativo. Al responder, incluye todos los detalles y contexto relevantes, y utiliza listas numeradas o viñetas para desglosar procesos complejos. Si la documentación disponible no abarca todos los aspectos, sintetiza la mejor respuesta posible basándote en tu formación y en la documentación provista. No solicites más información ni pidas disculpas por la falta de detalles; en su lugar, infiere y entrega la respuesta más completa y exacta.
+
+**IMPORTANTE**: SIEMPRE debes usar la herramienta `retrieve_relevant_documentation` para TODAS las consultas sobre VISA, Mastercard, medios de pago, tarjetas, transacciones o temas relacionados. Nunca respondas directamente sin consultar la documentación disponible primero. Este paso es OBLIGATORIO.
 
 **Formato de respuesta según el tipo de informe solicitado:**
 
@@ -87,26 +99,24 @@ Tu misión es responder consultas regulatorias con información precisa, detalla
 {conclusion}
 
 **Herramientas Disponibles:**
-- **retrieve_relevant_documentation**: Extrae y resume los fragmentos más relevantes de la documentación de protección de datos. Devuelve un resumen conciso de los puntos clave.
-- **retrieve_detailed_information**: Obtén una vista granular y profunda de la documentación cuando se requieran aclaraciones o detalles técnicos específicos.
-- **cross_reference_information**: Conecta la consulta regulatoria con contenido relacionado almacenado en la base de datos, asegurando la coherencia y el contexto entre diferentes normativas.
-- **generate_report**: Genera informes estructurados y detallados sobre cumplimiento, auditorías o evaluaciones de riesgos en materia de protección de datos. El informe puede ser generado en formato Word o en formato PPT, según se especifique en la consulta. Esta herramienta se invoca únicamente si la consulta lo solicita explícitamente (por ejemplo, “Genera un informe en PPT”, “Elabora un reporte en Word”, etc.).
-- **perform_gap_analysis**: Realiza un análisis GAP de la política proporcionada en comparación con la normativa de protección de datos.
+- **retrieve_relevant_documentation**: Extrae y resume los fragmentos más relevantes de la documentación de VISA y Mastercard. DEBES USAR ESTA HERRAMIENTA PARA TODAS LAS CONSULTAS.
+- **translate_response**: OBLIGATORIO usar esta herramienta SIEMPRE que la consulta esté en INGLÉS. Debes traducir tu respuesta completa antes de enviarla.
+- **cross_reference_information**: Conecta la consulta regulatoria con contenido relacionado.
+- **perform_gap_analysis**: Realiza un análisis GAP de la política proporcionada.
 
-**Flujo de Trabajo:**
-- **Para resúmenes o visiones generales:** Utiliza *retrieve_relevant_documentation* para extraer y resumir los puntos clave.
-- **Para detalles técnicos o explicaciones paso a paso:** Utiliza *retrieve_detailed_information* y organiza la respuesta en secciones numeradas o en viñetas.
-- **Para conectar información regulatoria relacionada:** Utiliza *cross_reference_information* para establecer enlaces contextuales entre diferentes normativas.
-- **Para la generación de informes:** Llama a *generate_report* solo cuando la consulta incluya instrucciones explícitas para ello, y asegúrate de generar el informe en el formato solicitado (Word o PPT).
-- **Para el análisis GAP:** Llama a *perform_gap_analysis* cuando la consulta requiera un análisis GAP detallado de la política proporcionada en comparación con la normativa de protección de datos.
+**PROCESO OBLIGATORIO PARA CONSULTAS EN INGLÉS:**
+1. Usar retrieve_relevant_documentation
+2. Preparar respuesta en español
+3. SIEMPRE llamar a translate_response(content=tu_respuesta, target_language="english")
+4. Entregar SOLO la versión traducida
+
+**PROCESO PARA CONSULTAS EN ESPAÑOL:**
+1. Usar retrieve_relevant_documentation
+2. Entregar respuesta en español
 
 **Notas Importantes:**
-- Responde exclusivamente a consultas sobre regulación de protección de datos, leyes de privacidad y asuntos de cumplimiento normativo.
-- Asegúrate de que tus respuestas sean detalladas, bien organizadas y estructuradas. Emplea listas numeradas o viñetas siempre que sea necesario para clarificar procesos complejos.
-- Cada vez que invoques una herramienta (usando 'tool_call'), la siguiente respuesta debe ser un 'tool_return' con la información completa de esa herramienta. No omitas la respuesta de la herramienta.
-- Si la documentación es incompleta o ambigua, sintetiza la mejor respuesta posible sin mencionar la carencia de información.
-- Indica claramente si la respuesta es un resumen, una explicación detallada, una respuesta con referencias cruzadas o un informe generado.
-- Utiliza únicamente las herramientas necesarias según la consulta específica del usuario, evitando llamadas innecesarias.
+- NUNCA respondas a una consulta sin primero usar la herramienta retrieve_relevant_documentation.
+- NUNCA respondas en español a una consulta en inglés.
 
 """
 
@@ -166,26 +176,39 @@ async def retrieve_relevant_documentation(ctx: RunContext[AIDeps], user_query: s
     """
     Retrieve relevant documentation chunks based on the query with RAG.
     """
+    logger.info("HERRAMIENTA INVOCADA: retrieve_relevant_documentation")
     try:
+        logger.info(f"Generando embedding para la consulta: {user_query[:50]}...")
+        logger.info(f"Consulta recibida en la herramienta: {user_query[:100]}..." if len(user_query) > 100 else user_query)
+        logger.info("=" * 80)
         query_embedding = await get_embedding(user_query, ctx.deps.openai_client)
         if not any(query_embedding):
             logger.warning("Received a zero embedding vector. Skipping search.")
             return "No relevant documentation found."
         
+        # Primero, obtener los chunks más relevantes por similitud vectorial
+        logger.info(f"Buscando chunks por similitud vectorial (match_count={MAX_CHUNKS_RETURNED})")
         result = ctx.deps.supabase.rpc(
-            'match_site_pages',
+            'match_visa_mastercard_v5',
             {
                 'query_embedding': query_embedding,
-                'match_count': MAX_CHUNKS_RETURNED,
-                'filter': {} # Filtro vacío
+                'match_count': MAX_CHUNKS_RETURNED
+                # 'filter': {"similarity_threshold": 0.5}  Filtro vacío
             }
         ).execute()
         
         if not result.data:
             logger.info("No relevant documentation found for the query.")
             return "No relevant documentation found."
-            
+        
+        logger.info(f"Encontrados {len(result.data)} chunks por similitud vectorial")
+        for i, doc in enumerate(result.data):
+            logger.debug(f"Chunk vectorial #{i+1}: {doc['title']} (similarity: {doc.get('similarity', 'N/A')})")
+        
         formatted_chunks = []
+        cluster_ids = set()  # Para almacenar los cluster_ids de los chunks relevantes
+        
+        # Procesar los resultados iniciales
         for doc in result.data:
             chunk_text = f"""
 # {doc['title']}
@@ -193,30 +216,74 @@ async def retrieve_relevant_documentation(ctx: RunContext[AIDeps], user_query: s
 {doc['content']}
 """
             formatted_chunks.append(chunk_text)
-            logger.debug(f"Retrieved document: {doc['title']}")
+            
+            # Extraer el cluster_id si existe en los metadatos
+            if 'metadata' in doc and doc['metadata'] and 'cluster_id' in doc['metadata']:
+                cluster_id = doc['metadata'].get('cluster_id')
+                if cluster_id is not None and cluster_id != -1:
+                    cluster_ids.add(cluster_id)
+        
+        logger.info(f"Identificados {len(cluster_ids)} clusters diferentes: {cluster_ids}")
+        
+        # Si encontramos cluster_ids válidos, buscar chunks adicionales del mismo cluster
+        additional_chunks = []
+        for cluster_id in cluster_ids:
+            # Buscar más chunks del mismo cluster
+            logger.info(f"Buscando chunks adicionales para el cluster_id={cluster_id}")
+            cluster_result = ctx.deps.supabase.rpc(
+                'match_visa_mastercard_v5_by_cluster',
+                {
+                    'cluster_id': cluster_id,
+                    'match_count': 4  # Limitamos a 4 chunks adicionales por cluster
+                }
+            ).execute()
+            
+            cluster_chunks_count = 0
+            if cluster_result.data:
+                for doc in cluster_result.data:
+                    # Verificar que no sea un documento que ya tenemos
+                    if not any(doc['id'] == int(existing_doc['id']) for existing_doc in result.data):
+                        cluster_chunks_count += 1
+                        additional_text = f"""
+# {doc['title']} (Del mismo tema que otros resultados)
 
-        logger.info(f"Returning {len(formatted_chunks)} relevant documentation chunks.")    
-
-        combined_text = "\n\n---\n\n".join(formatted_chunks)
+{doc['content']}
+"""
+                        additional_chunks.append(additional_text)
+                        logger.debug(f"Chunk por cluster #{cluster_chunks_count}: {doc['title']} (cluster_id: {cluster_id})")
+            
+            logger.info(f"Recuperados {cluster_chunks_count} chunks adicionales del cluster {cluster_id}")
+        
+        # Combinar chunks originales con los adicionales
+        all_chunks = formatted_chunks + additional_chunks
+        logger.info(f"RESUMEN: {len(formatted_chunks)} chunks por similitud vectorial + {len(additional_chunks)} chunks por cluster = {len(all_chunks)} chunks en total")
+        
+        combined_text = "\n\n---\n\n".join(all_chunks)
         total_tokens = count_tokens(combined_text, llm)
-        logger.debug(f"Total tokens in combined documentation: {total_tokens}")
-
+        logger.info(f"Total tokens en todos los chunks: {total_tokens}")
+        
+        # Truncar si es necesario
         if total_tokens > MAX_TOTAL_TOKENS:
-            logger.info("El contenido combinado excede el límite de tokens. Se realizará truncamiento.")
+            logger.info(f"El contenido combinado excede el límite de tokens ({total_tokens} > {MAX_TOTAL_TOKENS}). Se realizará truncamiento.")
             truncated_chunks = []
             accumulated_tokens = 0
-            for chunk in formatted_chunks:
+            chunks_included = 0
+            for chunk in all_chunks:
                 chunk_tokens = count_tokens(chunk, llm)
                 if accumulated_tokens + chunk_tokens > MAX_TOTAL_TOKENS:
                     remaining_tokens = MAX_TOTAL_TOKENS - accumulated_tokens
                     truncated_chunk = truncate_text(chunk, remaining_tokens, llm)
                     truncated_chunks.append(truncated_chunk)
+                    chunks_included += 1
+                    logger.debug(f"Chunk #{chunks_included} truncado para caber en el límite de tokens")
                     break
                 else:
                     truncated_chunks.append(chunk)
                     accumulated_tokens += chunk_tokens
+                    chunks_included += 1
+            
             combined_text = "\n\n---\n\n".join(truncated_chunks)
-            logger.debug(f"After truncation, total tokens: {count_tokens(combined_text, llm)}")
+            logger.info(f"Después de truncar: {chunks_included} chunks incluidos, {count_tokens(combined_text, llm)} tokens totales")
         
         return combined_text
     
@@ -225,83 +292,28 @@ async def retrieve_relevant_documentation(ctx: RunContext[AIDeps], user_query: s
         return f"Error retrieving documentation: {str(e)}"
 
 @ai_expert.tool
-async def retrieve_detailed_information(ctx: RunContext[AIDeps], user_query: str, detail_level: str = "standard") -> str:
+async def cross_reference_information(ctx: RunContext[AIDeps], primary_topic: str, related_topics: List[str] = None) -> str:
     """
-    Recupera información de la documentación con mayor nivel de detalle basada en la consulta.
-    Esta herramienta obtiene más fragmentos para proporcionar datos más granulares.
-    Si detail_level es "extended", se incluirán referencias específicas y citas literales.
+    Conecta la consulta regulatoria con contenido relacionado almacenado en la base de datos,
+    asegurando la coherencia y el contexto entre diferentes normativas.
+    
+    Args:
+        primary_topic: El tema principal de la consulta
+        related_topics: Lista opcional de temas relacionados para la referencia cruzada
     """
+    logger.info("HERRAMIENTA INVOCADA: cross_reference_information")
+    logger.info(f"Tema principal: {primary_topic}")
+    if related_topics:
+        logger.info(f"Temas relacionados: {related_topics}")
+    else:
+        logger.info("No se especificaron temas relacionados")
+    
     try:
-        # Obtener el embedding de la consulta
-        query_embedding = await get_embedding(user_query, ctx.deps.openai_client)
-        if not any(query_embedding):
-            logger.warning("El vector embedding resultó ser cero. No se puede proceder con la búsqueda detallada.")
-            return "Lo siento, no pude procesar tu consulta para obtener detalles."
-
-        # Se define un mayor número de fragmentos para información detallada
-        MAX_DETAILED_CHUNKS = 4
-        result = ctx.deps.supabase.rpc(
-            'match_site_pages',
-            {
-                'query_embedding': query_embedding,
-                'match_count': MAX_DETAILED_CHUNKS,
-                'filter': {}  # Puedes agregar filtros específicos si tu DB lo permite
-            }
-        ).execute()
-
-        if not result.data or len(result.data) == 0:
-            logger.info("No se encontró documentación detallada para la consulta.")
-            return "No se encontró información detallada relevante para tu consulta."
-
-        detailed_chunks = []
-        for doc in result.data:
-            if detail_level == "extended":
-                # Se asume que el documento contiene campos 'reference' y 'literal_quote'
-                chunk_text = (
-                    f"## {doc['title']}\n\n"
-                    f"<strong>Summary:</strong> <em>{doc.get('summary', 'No disponible')}</em>\n\n"
-                    f"<strong>Metadata:</strong> <em>{doc.get('metadata', 'No disponible')}</em>\n\n"
-                    f"<strong>Cita:</strong> <em>\"{doc.get('literal_quote','No disponible')}\"</em>\n\n"
-                    f"<strong>Cita:</strong>\n<blockquote><em>\"{doc.get('content', 'No disponible')}\"</em></blockquote>\n\n"
-                    f"<strong>URL:</strong> <em>{doc.get('url', 'No disponible')}</em>\n\n"
-                    f"{doc['content']}\n"
-                )
-            else:
-                # Nivel estándar: solo título y contenido
-                chunk_text = (
-                    f"## {doc['title']}\n\n"
-                    f"{doc['content']}"
-                )
-            detailed_chunks.append(chunk_text)
-            logger.debug(f"Detalle recuperado: {doc['title']}")
-
-        detailed_text = "\n\n---\n\n".join(detailed_chunks)
-        total_tokens = count_tokens(detailed_text, llm)
-        logger.debug(f"Total de tokens en la información detallada: {total_tokens}")
-
-        # Verificar que el contenido no exceda el límite de tokens
-        if total_tokens > MAX_TOTAL_TOKENS:
-            logger.info("El contenido detallado excede el límite de tokens. Se realizará truncamiento.")
-            truncated_chunks = []
-            accumulated_tokens = 0
-            for chunk in detailed_chunks:
-                chunk_tokens = count_tokens(chunk, llm)
-                if accumulated_tokens + chunk_tokens > MAX_TOTAL_TOKENS:
-                    remaining_tokens = MAX_TOTAL_TOKENS - accumulated_tokens
-                    truncated_chunk = truncate_text(chunk, remaining_tokens, llm)
-                    truncated_chunks.append(truncated_chunk)
-                    break
-                else:
-                    truncated_chunks.append(chunk)
-                    accumulated_tokens += chunk_tokens
-            detailed_text = "\n\n---\n\n".join(truncated_chunks)
-            logger.debug(f"Tokens después del truncamiento: {count_tokens(detailed_text, llm)}")
-
-        return detailed_text
-
+        # Implementación pendiente
+        return "Funcionalidad de referencia cruzada en desarrollo."
     except Exception as e:
-        logger.error(f"Error recuperando información detallada: {str(e)}")
-        return f"Lo siento, ocurrió un error al recuperar la información detallada: {str(e)}"
+        logger.error(f"Error en cross_reference_information: {e}")
+        return f"Error en la referencia cruzada de información: {str(e)}"
 
 #@ai_expert.tool
 #async def generate_compliance_report(ctx: RunContext[AIDeps], compliance_output: str, template: str = None) -> str:
@@ -339,6 +351,9 @@ async def perform_gap_analysis(ctx: RunContext[AIDeps], policy_text: str) -> str
     
     Por favor, genera un análisis GAP detallado y estructurado en formato Markdown.
     """
+    logger.info("HERRAMIENTA INVOCADA: perform_gap_analysis")
+    logger.info(f"Longitud del texto de política a evaluar: {len(policy_text)} caracteres")
+    
     try:
         prompt = f"""Realiza un análisis GAP detallado (mínimo 5.000 palabras) de la siguiente política en comparación con la normativa de protección de datos. El análisis debe cumplir con las mejores prácticas de un GAP analysis, que incluya:
         
@@ -354,21 +369,64 @@ async def perform_gap_analysis(ctx: RunContext[AIDeps], policy_text: str) -> str
         **Política a evaluar:**
         {policy_text}
         """
+        
+        logger.info("Generando análisis GAP usando el modelo LLM")
+        
         # Utilizar el modelo para generar el análisis GAP
         response = await ctx.deps.openai_client.chat.completions.create(
                 model=llm,
                 messages=[{"role": "user", "content": prompt}],
-                temperature=0.3,
+                temperature=0.2,
                 max_tokens=3000
             )
             
         # Extraer el contenido de la respuesta
         gap_analysis = response.choices[0].message.content
-            
-        logger.info("GAP analysis completado con éxito")
+        
+        logger.info(f"GAP analysis completado con éxito. Longitud de la respuesta: {len(gap_analysis)} caracteres")
         return gap_analysis
             
     except Exception as e:
         logger.error(f"Error realizando GAP analysis: {str(e)}")
         return f"Lo siento, ocurrió un error al realizar el análisis de brechas: {str(e)}"
+
+
+@ai_expert.tool
+async def translate_response(ctx: RunContext[AIDeps], content: str, target_language: str) -> str:
+    """
+    Traduce el contenido proporcionado al idioma objetivo especificado.
+    
+    Args:
+        content: El texto a traducir
+        target_language: El idioma objetivo (ej. "english", "spanish")
+    
+    Returns:
+        El texto traducido al idioma objetivo
+    """
+    logger.info("HERRAMIENTA INVOCADA: translate_response")
+    logger.info(f"Traduciendo contenido al idioma: {target_language}")
+    
+    try:
+        # Usamos el modelo GPT para realizar la traducción
+        prompt = f"""Traduce el siguiente texto al idioma {target_language}, 
+        manteniendo el formato, listas, viñetas y estructura. El texto debe quedar 
+        fluido y natural en el idioma objetivo. Conserva cualquier terminología técnica 
+        especializada adaptándola adecuadamente al idioma destino:
+
+        {content}"""
+        
+        response = await ctx.deps.openai_client.chat.completions.create(
+            model=llm,
+            messages=[{"role": "user", "content": prompt}],            
+        )
+        
+        translated_content = response.choices[0].message.content
+        logger.info(f"Traducción completada. Longitud del texto traducido: {len(translated_content)} caracteres")
+        
+        return translated_content
+    except Exception as e:
+        logger.error(f"Error en la traducción: {str(e)}")
+        return f"Error en la traducción: {str(e)}"
+
+
 # ===================== FIN DE LAS HERRAMIENTAS DEL AGENTE =====================

@@ -370,3 +370,5 @@ async def retrieve_risk_matrix(ctx: RunContext[RiskAssessmentDeps]) -> str:
 #    except Exception as e:
 #        logger.error(f"Error retrieving sector cases: {e}")
 #        return f"Error al buscar casos de referencia para el sector: {sector}. Considera una evaluación de riesgos basada en patrones comunes del sector."
+
+
