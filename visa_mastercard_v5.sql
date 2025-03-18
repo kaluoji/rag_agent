@@ -18,7 +18,13 @@ create table visa_mastercard_v5 (
 );
 
 -- Create an index for better vector similarity search performance
-create index on visa_mastercard_v5 using ivfflat (embedding vector_cosine_ops);
+-- create index on visa_mastercard_v5 using ivfflat (embedding vector_cosine_ops);
+
+DROP INDEX IF EXISTS visa_mastercard_v5_embedding_idx;
+CREATE INDEX visa_mastercard_v5_embedding_hnsw_idx 
+  ON visa_mastercard_v5 
+  USING hnsw (embedding vector_cosine_ops) 
+  WITH (ef_construction = 200);
 
 -- Create an index on metadata for faster filtering
 create index idx_visa_mastercard_v5_metadata on visa_mastercard_v5 using gin (metadata);
@@ -53,8 +59,7 @@ begin
     visa_mastercard_v5.metadata,
     1 - (visa_mastercard_v5.embedding <=> query_embedding) as similarity
   from visa_mastercard_v5
-  -- WHERE visa_mastercard_v5.metadata @> filter
-  -- and 1 - (visa_mastercard_v5.embedding <=> query_embedding) >= COALESCE((filter->>'similarity_threshold')::float, 0.5)
+  --WHERE 1 - (visa_mastercard_v5.embedding <=> query_embedding) >= COALESCE((filter->>'similarity_threshold')::float, 0.0)
   order by visa_mastercard_v5.embedding <=> query_embedding
   limit match_count;
 end;
@@ -106,6 +111,3 @@ BEGIN
 END;
 $$;
 
-
--- Elimina la función actual
-DROP FUNCTION IF EXISTS match_visa_mastercard_v5_by_cluster;

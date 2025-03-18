@@ -146,7 +146,7 @@ class ProcessedChunk:
 # -------------------------------------------------------------------
 # Función para dividir el texto en fragmentos - Semantic Chunking
 # -------------------------------------------------------------------
-async def semantic_chunk_text(text: str, chunk_size: int = 1400, min_chunk_size: int = 500, max_chunks: int = 50, overlap_size: int = 150) -> List[Dict]:
+async def semantic_chunk_text(text: str, chunk_size: int = 800, min_chunk_size: int = 500, max_chunks: int = 50, overlap_size: int = 75) -> List[Dict]:
     """
     Divide el texto en fragmentos semánticamente coherentes usando clustering.
     Incluye superposición entre chunks del mismo cluster para mantener contexto.
@@ -256,7 +256,7 @@ async def semantic_chunk_text(text: str, chunk_size: int = 1400, min_chunk_size:
     
     return final_chunks_with_metadata
 
-def chunk_text(text: str, chunk_size: int = 1400) -> List[str]:
+def chunk_text(text: str, chunk_size: int = 800) -> List[str]:
     """
     Divide el texto en fragmentos de tamaño similar.
     Método básico para cuando el semantic chunking falla.
@@ -361,10 +361,10 @@ async def get_embedding(text: str) -> List[float]:
         return response.data[0].embedding
     except RetryError as e:
         logging.error(f"Error después de múltiples intentos al obtener embedding: {e}")
-        return [0] * 3072  # Vector nulo en caso de error
+        return [0] * 1536  # Vector nulo en caso de error
     except Exception as e:
         logging.error(f"Error al obtener embedding: {e}")
-        return [0] * 3072  # Vector nulo en caso de error
+        return [0] * 1536  # Vector nulo en caso de error
 
 async def batch_get_embeddings(texts: List[str], batch_size: int = 20) -> List[List[float]]:
     """
@@ -406,12 +406,12 @@ async def batch_get_embeddings(texts: List[str], batch_size: int = 20) -> List[L
         except RetryError as e:
             logging.error(f"Error después de múltiples intentos al obtener embeddings en batch: {e}")
             # Fallback: rellenar con vectores nulos
-            null_embeddings = [[0] * 3072 for _ in range(len(batch))]
+            null_embeddings = [[0] * 1536 for _ in range(len(batch))]
             all_embeddings.extend(null_embeddings)
         except Exception as e:
             logging.error(f"Error al obtener embeddings en batch: {e}")
             # Fallback: rellenar con vectores nulos
-            null_embeddings = [[0] * 3072 for _ in range(len(batch))]
+            null_embeddings = [[0] * 1536 for _ in range(len(batch))]
             all_embeddings.extend(null_embeddings)
     
     return all_embeddings
@@ -593,7 +593,7 @@ async def process_chunk(chunk_with_metadata: Dict, chunk_number: int, identifier
 
 async def insert_chunk(chunk: ProcessedChunk):
     """
-    Inserta el fragmento procesado en la tabla 'visa_mastercard_v5' de Supabase.
+    Inserta el fragmento procesado en la tabla 'visa_mastercard_v6' de Supabase.
     Si falla, guarda los datos localmente para procesamiento posterior.
     """
     try:
@@ -606,7 +606,7 @@ async def insert_chunk(chunk: ProcessedChunk):
             "metadata": chunk.metadata,
             "embedding": chunk.embedding
         }
-        result = supabase.table("visa_mastercard_v5").insert(data).execute()
+        result = supabase.table("visa_mastercard_v6").insert(data).execute()
         logging.info(f"Inserted chunk {chunk.chunk_number} for {chunk.url}")
         return result
     except Exception as e:

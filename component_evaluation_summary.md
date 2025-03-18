@@ -2,12 +2,12 @@
         # Resumen de Evaluación de Componentes RAG
         
         ## Componente de Recuperación (Retrieval)
-        - **Relevancia de Contexto**: 0.0000
-        - **Recall de Contexto**: 0.0000
+        - **Relevancia de Contexto**: 0.0214
+        - **Recall de Contexto**: 0.4521
         
         ## Componente de Generación (Generation)
-        - **Fidelidad**: 0.5224
-        - **Relevancia de Respuesta**: 0.4120
+        - **Fidelidad**: 0.0884
+        - **Relevancia de Respuesta**: 0.1105
         
         ## Interpretación
         

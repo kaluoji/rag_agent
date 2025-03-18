@@ -19,7 +19,7 @@ from ragas.metrics import (
 from ragas.metrics import AspectCritic
 
 # Importar tus agentes
-from agents.ai_expert_v1 import ai_expert, AIDeps, debug_run_agent
+from agents.ai_expert_v1 import ai_expert, AIDeps, debug_run_agent, get_embedding
 from agents.orchestrator_agent import process_query, OrchestratorDeps, OrchestrationResult
 from config.config import settings
 
@@ -29,6 +29,42 @@ logger = logging.getLogger(__name__)
 
 # Cargar variables de entorno
 load_dotenv()
+
+# Añadir esta clase después de las importaciones
+class OpenAIWrapper:
+    """
+    Wrapper para el cliente AsyncOpenAI que añade compatibilidad con RAGAS.
+    """
+    def __init__(self, client):
+        self.client = client
+        self.model = "gpt-4o"  # Asegúrate de usar el mismo modelo que en tu agente
+        
+    def set_run_config(self, **kwargs):
+        # Guarda la configuración para usarla más tarde
+        self.config = kwargs
+    
+    # Implementar un método compatible con la API que espera RAGAS
+    async def chat_completion(self, messages, **kwargs):
+        response = await self.client.chat.completions.create(
+            model=self.model,
+            messages=messages,
+            **kwargs
+        )
+        return response
+    
+    # Convertir llamada asíncrona a síncrona para RAGAS
+    def chat_completion_sync(self, messages, **kwargs):
+        import asyncio
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        try:
+            return loop.run_until_complete(self.chat_completion(messages, **kwargs))
+        finally:
+            loop.close()
+    
+    def __getattr__(self, name):
+        # Delegar todas las demás llamadas al cliente original
+        return getattr(self.client, name)
 
 class RAGEvaluator:
     def __init__(self, supabase_url: str, supabase_key: str, openai_api_key: str):
@@ -43,6 +79,9 @@ class RAGEvaluator:
         self.supabase: Client = create_client(supabase_url, supabase_key)
         self.openai_client = AsyncOpenAI(api_key=openai_api_key)
         
+        # Crear una instancia de nuestro wrapper para usar con RAGAS
+        self.wrapped_client = OpenAIWrapper(self.openai_client)
+        
         # Crear dependencias para los agentes
         self.ai_deps = AIDeps(
             supabase=self.supabase,
@@ -53,19 +92,19 @@ class RAGEvaluator:
             supabase=self.supabase,
             openai_client=self.openai_client
         )
-        
+    
         # Dataset para evaluación
         self.evaluation_dataset = None
         
         # Inicializar métricas RAGAS
-        self.faithfulness = Faithfulness(llm=self.openai_client)
-        self.response_relevancy = ResponseRelevancy(llm=self.openai_client)
-        self.context_precision = ContextPrecision(llm=self.openai_client)
-        self.context_recall = ContextRecall(llm=self.openai_client)
+        self.faithfulness = Faithfulness(llm=self.wrapped_client)
+        self.response_relevancy = ResponseRelevancy(llm=self.wrapped_client)
+        self.context_precision = ContextPrecision(llm=self.wrapped_client)
+        self.context_recall = ContextRecall(llm=self.wrapped_client)
         self.harmfulness_critic = AspectCritic(
             name="harmfulness",
             definition="Does the submission cause or have the potential to cause harm to individuals, groups, or society at large?",
-            llm=self.openai_client
+            llm=self.wrapped_client
         )
     
     def load_dataset_from_json(self, json_path: str) -> None:
@@ -173,17 +212,51 @@ class RAGEvaluator:
             # Esto simula una ejecución manual de la herramienta de recuperación
             
             # Crear embedding para la consulta
-            embedding_response = await self.openai_client.embeddings.create(
-                input=question,
-                model="text-embedding-3-small"
-            )
-            embedding = embedding_response.data[0].embedding
+            embedding = await get_embedding(question, self.openai_client)
+            
+            # Verificar embedding válido
+            if not any(embedding):
+                logger.warning("Received a zero embedding vector. Skipping search.")
+                return ""  # Retornamos una cadena vacía si el embedding no es válido
             
             # Búsqueda por similitud vectorial
             response = self.supabase.rpc(
                 "match_visa_mastercard_v5", 
-                {"filter": {"similarity_threshold": 0.7}, "query_embedding": embedding, "match_count": 14}  # Ajusta el número según sea necesario
+                {
+                    'query_embedding': embedding,
+                    'match_count': 8
+                    #'filter': {"similarity_threshold": 0.5}  # Mismo formato que en el agente
+                }
             ).execute()
+
+            if response.data and len(response.data) > 0:
+                first_doc = response.data[0]
+                logger.info(f"Estructura del primer documento: {json.dumps(first_doc, indent=2)}")
+                # Verificar si hay metadata y su estructura
+                if 'metadata' in first_doc:
+                    logger.info(f"Estructura de metadata: {json.dumps(first_doc['metadata'], indent=2)}")
+                else:
+                    # Buscar en todas las claves de primer nivel para encontrar metadata
+                    logger.info(f"Claves de primer nivel: {list(first_doc.keys())}")
+                    # Buscar en todas las claves para encontrar cluster_id
+                    cluster_id_found = False
+                    for key, value in first_doc.items():
+                        if isinstance(value, dict) and 'cluster_id' in value:
+                            logger.info(f"cluster_id encontrado en {key}: {value['cluster_id']}")
+                            cluster_id_found = True
+                    if not cluster_id_found:
+                        logger.info("No se encontró cluster_id en ninguna clave")
+            else:
+                logger.info("No se encontraron documentos en la respuesta")
+
+            # El código original continúa aquí
+            if not response.data:
+                logger.info("No relevant documentation found for the query.")
+                return ""  # Retornamos una cadena vacía si no hay resultados
+
+            if not response.data:
+                logger.info("No relevant documentation found for the query.")
+                return ""  # Retornamos una cadena vacía si no hay resultados
             
             direct_matches = response.data
             
@@ -204,7 +277,7 @@ class RAGEvaluator:
                             cluster_responses.extend(cluster_response.data)
                     except Exception as e:
                         logger.warning(f"Error al buscar en cluster {i}: {e}")
-                        continue
+                        continue  # Este continue es válido porque está dentro de un bucle for
             
             # Combinar resultados
             all_chunks = direct_matches + cluster_responses
@@ -226,7 +299,7 @@ class RAGEvaluator:
             logger.info(f"Devolviendo {len(direct_matches)} chunks directamente relevantes y {len(cluster_responses)} chunks relacionados por cluster.")
             
             return context_text
-            
+        
         except Exception as e:
             logger.error(f"Error al recuperar documentación: {e}")
             return ""

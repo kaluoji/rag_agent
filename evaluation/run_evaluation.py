@@ -95,7 +95,7 @@ async def run_full_evaluation(
         
         # Evaluar sistema
         metrics = await ragas_evaluator.evaluate_rag_system(
-            use_orchestrator=use_orchestrator,
+            use_orchestrator=False,
             output_path=os.path.join(output_dir, "ragas_results.csv")
         )
         
@@ -161,13 +161,14 @@ def prepare_testset(input_json: str, output_json: str, num_samples: Optional[int
     """
     try:
         with open(input_json, 'r', encoding='utf-8') as f:
-            data = json.load(f)
+            items = [json.loads(line) for line in f if line.strip()]
+            #data = json.load(f)
         
         # Convertir a lista de elementos si es un diccionario
-        if isinstance(data, dict):
-            items = list(data.values())
-        else:
-            items = data
+        #if isinstance(data, dict):
+        #    items = list(data.values())
+        #else:
+        #    items = data
         
         # Seleccionar muestra aleatoria si se especifica
         if num_samples and num_samples < len(items):

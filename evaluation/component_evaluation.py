@@ -20,7 +20,7 @@ from ragas.metrics import (
 )
 
 # Importar tus agentes
-from agents.ai_expert_v1 import ai_expert, AIDeps
+from agents.ai_expert_v1 import ai_expert, AIDeps, get_embedding, debug_run_agent
 from config.config import settings
 
 # Configuración de logging
@@ -87,7 +87,7 @@ class ComponentEvaluator:
     
     async def evaluate_retrieval_component(self, num_samples: int = None) -> pd.DataFrame:
         """
-        Evalúa el componente de recuperación (retrieval).
+        Evalúa el componente de recuperación (retrieval) utilizando el agente real.
         
         Args:
             num_samples: Número de muestras a evaluar (None para todas)
@@ -117,67 +117,38 @@ class ComponentEvaluator:
             logger.info(f"Evaluando retrieval para pregunta {idx}: {question[:50]}...")
             
             try:
-                # Implementamos directamente la lógica de recuperación sin depender de RunContext
+                # Usar el mismo agente que usarías en producción
+                response = await debug_run_agent(question, deps=self.ai_deps)
                 
-                # Crear embedding para la consulta
-                embedding_response = await self.openai_client.embeddings.create(
-                    input=question,
-                    model="text-embedding-3-small"
-                )
-                embedding = embedding_response.data[0].embedding
+                # Extraer la respuesta generada
+                generated_answer = response.data
                 
-                # Búsqueda por similitud vectorial
-                response = self.supabase.rpc(
-                    "match_visa_mastercard_v5", 
-                    {"filter": {"similarity_threshold": 0.7}, "query_embedding": embedding, "match_count": 14}
-                ).execute()
+                # Obtener el contexto usado mediante el mismo agente
+                # Para esto, podríamos analizar los logs o usar una función auxiliar que simule
+                # la misma recuperación que el agente
                 
-                direct_matches = response.data
+                # Por ahora usaremos el método anterior para obtener el contexto, pero con
+                # la garantía de que pasamos por el mismo flujo que el agente
+                context = await self._try_retrieve_with_query(question)
                 
-                # Búsqueda por clusters para enriquecer resultados
-                cluster_responses = []
-                if direct_matches and len(direct_matches) > 0:
-                    for i in range(2):  # Buscar en 2 clusters adicionales
-                        try:
-                            cluster_response = self.supabase.rpc(
-                                "match_visa_mastercard_v5_by_cluster",
-                                {
-                                    "cluster_id": i,  # ID del cluster
-                                    "match_count": 7  # Número de resultados
-                                }
-                            ).execute()
-                            if cluster_response.data:
-                                cluster_responses.extend(cluster_response.data)
-                        except Exception as e:
-                            logger.warning(f"Error al buscar en cluster {i}: {e}")
-                            continue
+                # Si no encontramos contexto en el primer intento, intentar con una versión simplificada
+                # Este enfoque simula lo que hace el agente internamente
+                if not context:
+                    # Intentar simplificar la consulta (similar a lo que hace el agente)
+                    simplified_query = question.replace('¿', '').replace('?', '')
+                    for word in ['cuál', 'cómo', 'qué', 'dónde', 'cuándo', 'quién', 'por qué', 'es', 'son', 'la', 'las', 'el', 'los', 'de', 'del']:
+                        simplified_query = simplified_query.replace(f' {word} ', ' ')
+                    
+                    context = await self._try_retrieve_with_query(simplified_query)
                 
-                # Combinar resultados
-                all_chunks = direct_matches + cluster_responses
+                # Guardar resultados
+                retrieved_contexts.append(context if context else "")
                 
-                # Eliminar duplicados (por ID)
-                seen_ids = set()
-                unique_chunks = []
-                for chunk in all_chunks:
-                    if chunk["id"] not in seen_ids:
-                        seen_ids.add(chunk["id"])
-                        unique_chunks.append(chunk)
-                
-                # Formatear el resultado
-                retrieved_context = ""
-                for chunk in unique_chunks:
-                    retrieved_context += f"\n\n--- Fragmento ID: {chunk['id']} ---\n\n"
-                    retrieved_context += chunk["content"]
-                
-                logger.info(f"Devolviendo {len(direct_matches)} chunks directamente relevantes y {len(cluster_responses)} chunks relacionados por cluster.")
-                
-                retrieved_contexts.append(retrieved_context)
-                
-                # Calcular métricas de retrieval simplificadas
-                relevancy = self._calculate_text_overlap(retrieved_context, expected_context)
+                # Calcular métricas
+                relevancy = self._calculate_text_overlap(context if context else "", expected_context)
                 relevancy_scores.append(relevancy)
                 
-                recall = self._calculate_recall(retrieved_context, expected_context)
+                recall = self._calculate_recall(context if context else "", expected_context)
                 recall_scores.append(recall)
                 
             except Exception as e:
@@ -202,10 +173,104 @@ class ComponentEvaluator:
         logger.info(f"Evaluación de retrieval completada. Relevancia promedio: {avg_relevancy:.4f}, Recall promedio: {avg_recall:.4f}")
         
         return results_df
+
+    async def _try_retrieve_with_query(self, query: str) -> str:
+        """
+        Intenta recuperar documentos con una consulta específica.
+        
+        Args:
+            query: La consulta para buscar documentos
+            
+        Returns:
+            El contexto recuperado, o cadena vacía si no se encontraron documentos
+        """
+        logger.info(f"Probando consulta: {query}")
+        
+        # Crear embedding para la consulta
+        embedding = await get_embedding(query, self.openai_client)
+        
+        # Verificar embedding válido
+        if not any(embedding):
+            logger.warning(f"Embedding inválido para consulta: {query}")
+            return ""
+        
+        # Búsqueda por similitud vectorial
+        response = self.supabase.rpc(
+            "match_visa_mastercard_v5", 
+            {
+                'query_embedding': embedding,
+                'match_count': 8
+            }
+        ).execute()
+        
+        logger.info(f"Response data length: {len(response.data) if hasattr(response.data, '__len__') else 'N/A'}")
+        
+        # Si no hay resultados, retornar cadena vacía
+        if not response.data or len(response.data) == 0:
+            logger.info(f"No se encontraron documentos para consulta: {query}")
+            return ""
+        
+        # Procesar resultados
+        direct_matches = response.data
+        logger.info(f"Encontrados {len(direct_matches)} chunks por similitud vectorial")
+        
+        # Búsqueda por clusters para enriquecer resultados
+        cluster_ids = set()
+        for doc in direct_matches:
+            if 'metadata' in doc and doc['metadata'] and 'cluster_id' in doc['metadata']:
+                cluster_id = doc['metadata'].get('cluster_id')
+                if cluster_id is not None and cluster_id != -1:
+                    cluster_ids.add(cluster_id)
+        
+        logger.info(f"Identificados {len(cluster_ids)} clusters diferentes: {cluster_ids}")
+        
+        # Buscar chunks adicionales por cluster
+        cluster_responses = []
+        for cluster_id in cluster_ids:
+            try:
+                cluster_result = self.supabase.rpc(
+                    'match_visa_mastercard_v5_by_cluster',
+                    {
+                        'cluster_id': cluster_id,
+                        'match_count': 4
+                    }
+                ).execute()
+                
+                if cluster_result.data:
+                    cluster_docs_added = 0
+                    for doc in cluster_result.data:
+                        if not any(str(doc['id']) == str(existing_doc['id']) for existing_doc in direct_matches):
+                            cluster_responses.append(doc)
+                            cluster_docs_added += 1
+                    logger.info(f"Recuperados {cluster_docs_added} chunks adicionales del cluster {cluster_id}")
+            except Exception as e:
+                logger.warning(f"Error al buscar en cluster {cluster_id}: {e}")
+                continue
+        
+        # Formatear resultado
+        all_chunks = direct_matches + cluster_responses
+        
+        # Eliminar duplicados
+        seen_ids = set()
+        unique_chunks = []
+        for chunk in all_chunks:
+            if chunk["id"] not in seen_ids:
+                seen_ids.add(chunk["id"])
+                unique_chunks.append(chunk)
+        
+        # Construir contexto recuperado
+        retrieved_context = ""
+        for chunk in unique_chunks:
+            retrieved_context += f"\n\n--- Fragmento ID: {chunk['id']} ---\n\n"
+            retrieved_context += chunk["content"]
+        
+        logger.info(f"Devolviendo {len(direct_matches)} chunks directamente relevantes y {len(cluster_responses)} chunks relacionados por cluster.")
+        
+        return retrieved_context
     
     async def evaluate_generation_component(self, num_samples: int = None) -> pd.DataFrame:
         """
-        Evalúa el componente de generación (generation).
+        Evalúa el componente de generación (generation) usando el agente real.
         
         Args:
             num_samples: Número de muestras a evaluar (None para todas)
@@ -236,37 +301,17 @@ class ComponentEvaluator:
             logger.info(f"Evaluando generación para pregunta {idx}: {question[:50]}...")
             
             try:
-                # Para evaluar solo la generación, proporcionamos directamente el contexto esperado
-                # en lugar de recuperarlo
+                # Usar el agente real para generar respuestas
+                response = await debug_run_agent(question, deps=self.ai_deps)
                 
-                # Construir prompt con el contexto esperado
-                combined_prompt = f"""
-                Pregunta: {question}
-                
-                Contexto para generar respuesta: {expected_context}
-                
-                Basándote ÚNICAMENTE en el contexto proporcionado, responde a la pregunta de manera concisa y directa.
-                """
-                
-                # Usar el modelo para generar respuesta
-                response = await self.openai_client.chat.completions.create(
-                    model=settings.llm_model,
-                    messages=[{"role": "user", "content": combined_prompt}],
-                    temperature=0.3,
-                    max_tokens=500
-                )
-                
-                generated_answer = response.choices[0].message.content
+                # Extraer la respuesta generada
+                generated_answer = response.data
                 generated_answers.append(generated_answer)
                 
-                # Calcular métricas de generación (simplificadas)
-                # En una implementación completa, usarías las métricas de RAGAS
-                
-                # Calcular fidelidad simulada (esto es simplificado)
+                # Calcular métricas
                 faithfulness_score = self._calculate_faithfulness(generated_answer, expected_context)
                 faithfulness_scores.append(faithfulness_score)
                 
-                # Calcular relevancia de respuesta simulada (esto es simplificado)
                 relevancy_score = self._calculate_response_relevancy(generated_answer, question, expected_answer)
                 relevancy_scores.append(relevancy_score)
                 

@@ -1,11 +1,1005 @@
 question,retrieved_context,expected_context,context_precision,context_recall
-¿Qué impacto tiene el aumento de las tarifas de aceptación de Visa en comercios de alto riesgo?,,"Visa justifica este cambio como parte de su estrategia para mitigar el riesgo de fraude y lavado de dinero en sectores de alto riesgo, los cuales suelen tener mayor volumen de disputas y contracargos. Este ajuste está documentado en Reglas de Visa en español.pdf.",0.0,0.0
-¿Cómo afectarán los nuevos requisitos de presentación de certificados de operaciones a los miembros patrocinados y principales?,,"Estos cambios buscan aumentar la transparencia y el control en la expansión de programas de Miembros Patrocinados, especialmente en regiones con regulaciones estrictas, evitando prácticas de arbitraje regulatorio y garantizando un estándar uniforme de cumplimiento. Este cambio está documentado en AI14902_SP.pdf.",0.0,0.0
-¿Qué impacto tiene la nueva tasa de acceso a la Sala Visa Infinite Lounge en Brasil y cuál es el incremento porcentual?,,"Visa ha establecido este ajuste de tarifas como parte de su plan de alineación con los precios de otras salas VIP en el aeropuerto, garantizando una experiencia consistente para los tarjetahabientes Visa Infinite. Aunque la nueva tarifa sigue siendo competitiva en comparación con otros lounges internacionales, el aumento podría generar resistencia entre quienes estaban acostumbrados a una tarifa más económica. Este cambio está especificado en AI14803_SP.pdf.",0.0,0.0
-¿Qué impacto tiene la nueva tasa de acceso a la Sala Visa Infinite Lounge en Brasil y cuál es el incremento porcentual?,,"Visa ha establecido este ajuste tarifario como parte de su plan de alineación con los precios de otras salas VIP dentro del aeropuerto, garantizando una experiencia consistente para los tarjetahabientes Visa Infinite. Aunque la nueva tarifa es competitiva frente a lounges internacionales, el aumento podría generar resistencia entre quienes disfrutaban de un acceso más económico. Este cambio está especificado en AI14803_SP.pdf.",0.0,0.0
-¿Cuáles son los costos adicionales para emisores que utilizan Visa Direct en 2025?,,"El objetivo de estos cambios es mejorar la seguridad y confiabilidad de los pagos instantáneos entre cuentas. A medida que aumenta el uso de Visa Direct, se hace necesario reforzar la infraestructura técnica y garantizar el cumplimiento normativo en cada país. Estos detalles están documentados en AI14787_SP.pdf.",0.0,0.0
-¿Cómo impactarán los nuevos requisitos de control de sanciones en la relación de los adquirentes con comercios de alto riesgo?,,"Estos requisitos incrementan los costos operativos y de cumplimiento para los adquirentes, que deben implementar herramientas avanzadas de detección de sanciones. Además, pueden afectar la relación con comercios de alto riesgo, tales como plataformas de remesas, criptomonedas o apuestas en línea. Visa responde a regulaciones internacionales para prevenir el lavado de dinero y el financiamiento ilícito. Los detalles se encuentran en AI14943_SP.pdf.",0.0,0.0
-¿Cuáles son los nuevos límites de tiempo para procesar transacciones de pago diferido y cómo afectan a los emisores?,,"Visa endureció estas reglas para evitar prácticas de procesamiento tardío, que previamente generaron disputas entre tarjetahabientes, comercios y emisores. Afecta especialmente a empresas de suscripción, aerolíneas y comercio transfronterizo, donde los pagos diferidos son comunes. Estos cambios están documentados en Reglas de Visa en español.pdf, en la sección sobre límites de fechas en transacciones.",0.0,0.0
-¿Cuáles son las nuevas tasas de intercambio (IRF) aplicables en 2025?,,Las modificaciones en las tasas de IRF se han realizado para alinearse con las regulaciones locales y ajustar la estructura de costos. Los detalles específicos por región y tipo de tarjeta se encuentran en el documento Reglas de Visa en español.pdf.,0.0,0.0
-¿Cuáles son las nuevas reglas sobre las diferencias entre montos de autorización y compensación en transacciones con tarjeta ausente?,,"Visa ha implementado esta regla para armonizar los requisitos globales de compensación y autorización, especialmente en transacciones donde el tarjetahabiente no está presente físicamente. Es clave en sectores como suscripciones digitales, comercio electrónico y servicios de transporte, donde pueden existir variaciones por propinas, cargos adicionales o cambios en el servicio. Estos cambios están documentados en Reglas de Visa en español.pdf, en la sección sobre procesamiento de transacciones.",0.0,0.0
-¿Cómo afecta el incumplimiento de los límites de desempeño de fraude a los emisores bajo el programa de supervisión de Visa?,,"Este programa busca forzar a los emisores a mejorar sus estrategias antifraude, dada la preocupación por el elevado volumen de fraude en transacciones en línea y con tarjetas clonadas. Los detalles están documentados en Reglas de Visa en español.pdf, sección 10.4.8.1.",0.0,0.0
+¿Cuál es la nueva estructura de precios de Visa B2B Payables y cómo impacta a los emisores?,"
+
+--- Fragmento ID: 85 ---
+
+La
+información del administrador del emisor se copiará de la información de Visa Resolve Online (VROL).
+Número de Identificación del Artículo: AI14607
+
+Para los emisores actualmente inscritos en VSPS, los BINes recién habilitados serán asignados a su organización
+actual en VSPS y heredarán todas las configuraciones preestablecidas a nivel de organización.
+No se requieren cambios técnicos del lado del cliente. Todos los emisores participantes deben evaluar sus
+procesos internos de soporte y todas las consideraciones relevantes, incluyendo la notificación a los
+tarjetahabientes sobre el servicio, los términos y condiciones asociados y otras regulaciones locales aplicables.
+Proceso para Optar por No Participar
+Para evitar las cuotas de configuración, los clientes tienen que notificar a su representante de Visa a más tardar el
+15 de enero del 2025 si deciden optar por no participar en la activación masiva. Es posible que los clientes deseen
+considerar sus políticas internas y limitaciones regulatorias específicas.
+Los clientes que no opten por no participar como se especifica más arriba están autorizando a Visa a habilitar VSPS
+y serán inscritos automáticamente en el servicio efectivo a partir del 13 de marzo del 2025.
+Alcance de VSPS
+VSPS aplicará a los números de cuenta primarios (PAN) emitidos por los BINes de emisor participantes habilitados
+para VSPS. Nota: La activación del 13 de marzo del 2025 no aplicará a los productos empresariales, comerciales o
+prepagados no recargables. Los clientes pueden agregar estos productos a su portafolio de VSPS si lo desean
+enviando el formulario de inscripción en VSPS a través de Visa Support Hub.
+Una vez que los tarjetahabientes informan los pagos elegibles no deseados (transacciones recurrentes, de pago a
+plazos y COF) a su emisor de tarjetas, los emisores pueden crear nuevas instrucciones de suspensión y administrar
+los ajustes para instrucciones de suspensión existentes dentro del servicio VSPS. Las capacidades disponibles para
+números PAN asociados con BINes habilitados incluyen:
+• Buscar transacciones que sean elegibles para VSPS
+• Crear una nueva solicitud de suspensión para un PAN, comercio o merchant category code (MCC)
+• Actualizar, ampliar o cancelar una instrucción de suspensión actual
+• Buscar y recuperar detalles sobre una instrucción de suspensión actual
+Cualquier autorización de transacción para la cual esté presente una solicitud activa de suspensión de pago será
+denegada y el mensaje de autorización enviado de vuelta al solicitante incluirá el motivo de la denegación. VSPS
+actualmente no está disponible para credenciales ajenas a Visa.
+Los emisores que deseen actualizar su experiencia del consumidor al integrar VSPS en su aplicación de banca móvil
+deberían considerar implementar las API de Visa Subscription Manager o VSPS. Las API de VSPS también pueden
+ser consumidas por los sistemas internos propiedad del emisor utilizados por los representantes del centro de
+llamadas. Para más detalles sobre las interfaces API, comuníquese con su representante de Visa.
+Acceso a VSPS
+Los clientes pueden acceder a la aplicación web de VSPS en Visa Access. Una vez que se configuren los accesos a la
+organización del emisor y al administrador del emisor, el administrador del emisor puede acceder al servicio
+siguiendo estos pasos:
+Número de Identificación del Artículo: AI14607
+
+--- Fragmento ID: 527 ---
+
+utotalidadoenparte,acomercios,
+tarjetahabientesoaningunaotrapersonasinelprevioconsentimientoporescritodeVisa.©2014—2024Visa.TodoslosDerechosReservados
+
+ReglasdeProductosyServiciosdeVisa
+4Emisión
+ReglasBásicasdeVisayReglasdeProductosyServiciosdeVisa
+l AdiscrecióndeVisa,amiembrosdeungrupooasociacióndeafinidadquerequiereunmedio
+parapagarbienesyserviciosrelacionadosconunnegocio,yqueestárepresentadoporuna
+compañíadelsectorpúblicooprivado
+Efectivoapartirdel30deseptiembredel2024EnlaRegióndeECMOA:UnEmisordeTarjetas
+ComercialesVisa3,4,5debetransmitirlainformacióncomercialylainformacióndelacuentadela
+TarjetaaVisamedianteunodelossiguientesmedios:
+l LaúltimaversióndelFormatoComercialdeVisa(VCF)
+l LaúltimaversióndelFormatoSimplificadodeSolucionesdeDatosIntelliLinkdeVisa(VIDSSF)
+l UnformatoacordadoporVisa
+EnlaRegióndeEuropa:UnEmisortienequereferirsealaTarjetaVisaComercialcomounodelos
+siguientestiposdeTarjetasparausoengastosempresariales:
+l TarjetaVisaEmpresarialqueseaunadelassiguientes:
+– UnaTarjetasdeCrédito
+– UnaTarjetadeDébitoDiferido
+– UnaTarjetadeDébitoDirectoInmediato
+– UnaTarjetaPrepagada
+l TarjetaVisaElectronEmpresarialqueseaunaTarjetadeDébitoDirectoInmediatoounaTarjetade
+Crédito
+l TarjetaVisaCorporativaqueseaunadelassiguientes:
+– UnaTarjetadeCrédito
+– UnaTarjetadeDébitoDiferido
+– UnaTarjetaPrepagada
+l TarjetaVisadeComprasInstitucionalesqueseaunaTarjetadeCrédito
+l TarjetadeGastosEmpresarialesparaMercadosPequeñosqueseaunaTarjetadeCrédito
+l TarjetadeGastosEmpresarialesparaMercadosGrandesqueseaunaTarjetadeCrédito
+EnlaRegióndeEuropa:UnEmisordeTarjetasVisaComercialtienequeenviaraVisa,almenos30
+díascalendarioantesdelaemisión,unasolicitudparaobtenerunacertificaciónporescritodeVisa
+quecertifiquequesusprogramas,sistemas,procedimientosyservicioscumplenconlasReglasde
+Visa.
+EnlaRegióndeUS:UnEmisortienequereferirsealaTarjetaVisaComercialcomounodelos
+siguientestiposdeTarjetasparausoengastosdenegocios:
+19deoctubredel2024 VisaConfidencial 530
+Aviso:EstainformaciónesdepropiedadexclusivayCONFIDENCIALdeVisa.LamismaesdistribuidaalosparticipantesdeVisaparaserusadaexclusivamenteenla
+administracióndesusprogramasdeVisa.Estainformaciónnopodráserduplicada,publicada,distribuidaodivulgada,ensutotalidadoenparte,acomercios,
+tarjetahabientesoaningunaotrapersonasinelprevioconsentimientoporescritodeVisa.©2014—2024Visa.TodoslosDerechosReservados
+
+--- Fragmento ID: 1359 ---
+
+utotalidadoenparte,acomercios,
+tarjetahabientesoaningunaotrapersonasinelprevioconsentimientoporescritodeVisa.©2014—2024Visa.TodoslosDerechosReservados
+
+Glosario
+Glosario
+ReglasBásicasdeVisayReglasdeProductosyServiciosdeVisa
+TarjetasVisaComerciales UnaTarjetafísicaovirtualparaelusodegastosdenegocioqueincluye:
+l
+TarjetaVisaEmpresarial1
+l TarjetaVisaElectronEmpresarial
+l VisaCommercialChoiceOmni
+l VisaCommercialChoiceTravel
+l TarjetaVisaCorporativa
+l TarjetaVisadeComprasInstitucionales,incluyendolaTarjetaVisa
+deFlota
+l TarjetaVisaAgro(EstasolamenteaplicaenlaRegióndeALC)
+l TarjetadeProgramaVDistribución
+l TarjetasdeGastosEmpresarialesparaMercadosGrandes
+l TarjetasdeGastosEmpresarialesparaMercadosPequeños
+1 EnlaRegióndeECMOA:IncluyendolaTarjetaVisadeFlota
+No.deIdentificación:0025272 Edición:Oct2024|ÚltimaActualización:Oct2020
+TasadeConversiónde TasaestablecidaporVisadelrangodetasasdisponiblesenlos
+Divisas mercadosmayoristasdedivisasparalaTransaccióncorrespondiente,la
+cualpuedevariardelatasaqueVisarecibe;olatasaoficialdecambio
+definidacomoobligatoriaporelgobiernoounórganodegobiernoen
+elpaísenelcualocurriólaTransacción.
+LatasadeVisapuedeajustarsemediantelaaplicacióndeunaCuota
+OpcionaldelEmisordeterminadaporelEmisorcuandoVisaNet
+conviertelaMonedadeTransacciónalaMonedadeFacturación.No
+obstante,cuandoVisaNetconviertelaMonedadeTransacciónala
+MonedadeLiquidacióndelAdquirente,oalaMonedaddeLiquidación
+delEmisor,latasaesaplicadaporVisaynopuedeajustarse.
+UnEmisorestablecerálatasadeconversiónasuTarjetahabienteyun
+AdquirenteestablecerálatasadeconversiónasuComercio,comose
+especificaenlasleyesyreglamentoscorrespondientes.
+UnEmisorestablecerálatasadeconversiónasuTarjetahabienteyun
+AdquirenteestablecerálatasadeconversiónasuComercio,comose
+especificaenlasleyesyreglamentoscorrespondientes.
+No.deIdentificación:0024534 Edición:Oct2024|ÚltimaActualización:Abr2021
+TasadeDescuentode EnlaRegióndeUSoenunTerritoriodeEE.UU.:Lacuota,expresada
+19deoctubredel2024 VisaConfidencial 1348
+Aviso:EstainformaciónesdepropiedadexclusivayCONFIDENCIALdeVisa.LamismaesdistribuidaalosparticipantesdeVisaparaserusadaexclusivamenteen
+laadministracióndesusprogramasdeVisa.Estainformaciónnopodráserduplicada,publicada,distribuidaodivulgada,ensutotalidadoenparte,acomercios,
+tarjetahabientesoaningunaotrapersonasinelprevioconsentimientoporescritodeVisa.©2014—2024Visa.TodoslosDerechosReservados
+
+--- Fragmento ID: 1309 ---
+
+utotalidadoenparte,acomercios,
+tarjetahabientesoaningunaotrapersonasinelprevioconsentimientoporescritodeVisa.©2014—2024Visa.TodoslosDerechosReservados
+
+Glosario
+Glosario
+ReglasBásicasdeVisayReglasdeProductosyServiciosdeVisa
+EmisorqueesParticipante UnEmisorqueharealizadoelProcesodeintegraciónorganizativaante
+ActivodelServiciode VisaparaparticiparenelServiciodeTokenVisa.
+TokendeVisa
+No.deIdentificación:0030569 Edición:Oct2024|ÚltimaActualización:Oct2018
+EmisorRecibidor EmisorquerecibeunaTransaccióndeCréditoOriginal
+No.deIdentificación:0025039 Edición:Oct2024|ÚltimaActualización:Oct2021
+EMV-Conforme UnaTarjetaoaplicaciónterminalquecumpleconlosrequisitos
+especificadosenlasEspecificacionesdeEMVIntegratedCircuitCard
+SpecificationsforPaymentSystems(EMV).
+No.deIdentificación:0024617 Edición:Oct2024|ÚltimaActualización:Oct2016
+EnLínea MétododesolicitarunaAutorizaciónatravésdeunaredde
+comunicaciones.
+No.deIdentificación:0024910 Edición:Oct2024|ÚltimaActualización:Oct2021
+EntidadComercialde Unaentidadqueotorgaunpréstamopersonalenelpuntodeventaaun
+PréstamosalConsumidor consumidorparaqueelconsumidorcompreunbienoserviciodeun
+ComercioElegible.
+No.deIdentificación:0031038 Edición:Oct2024|ÚltimaActualización:Abr2024
+EntidaddeInformesde UnnombreonúmerodeunaentidadasignadoporVisayautorizado
+Liquidación porelMiembroqueesutilizadoporVisaparainformesdeLiquidación.
+No.deIdentificación:0026049 Edición:Oct2024|ÚltimaActualización:Oct2019
+EntidaddeInformesde UnpuntofinaldentrodeunajerarquíadeLiquidacióndeVisa
+Liquidaciónde relacionadaconunaomásEntidadesdeInformesdeLiquidación.
+TransferenciasdeFondos
+No.deIdentificación:0026048 Edición:Oct2024|ÚltimaActualización:Abr2012
+EntidadqueSolicitaToken EntidadinscritaconunproveedordeserviciodeTokenparainiciar
+solicitudesdeTokensdeacuerdoconeldocumentoEMVPayment
+TokenizationSpecification.
+No.deIdentificación:0029519 Edición:Oct2024|ÚltimaActualización:Abr2017
+EntradadeEfectivo EfectivodepositadoenunComercioqueapoyalasTransaccionesde
+Pago“Push”Móviles,paraacreditaraunaCredencialdePago
+No.deIdentificación:0030582 Edición:Oct2024|ÚltimaActualización:Abr2020
+EspacioEconómico LosestadosmiembrosdelaUniónEuropea,eIslandia,Liechtensteiny
+Europeo–Regiónde Noruega.
+19deoctubredel2024 VisaConfidencial 1291
+Aviso:EstainformaciónesdepropiedadexclusivayCONFIDENCIALdeVisa.LamismaesdistribuidaalosparticipantesdeVisaparaserusadaexclusivamenteen
+laadministracióndesusprogramasdeVisa.Estainformaciónnopodráserduplicada,publicada,distribuidaodivulgada,ensutotalidadoenparte,acomercios,
+tarjetahabientesoaningunaotrapersonasinelprevioconsentimientoporescritodeVisa.©2014—2024Visa.TodoslosDerechosReservados
+
+--- Fragmento ID: 1301 ---
+
+utotalidadoenparte,acomercios,
+tarjetahabientesoaningunaotrapersonasinelprevioconsentimientoporescritodeVisa.©2014—2024Visa.TodoslosDerechosReservados
+
+Glosario
+Glosario
+ReglasBásicasdeVisayReglasdeProductosyServiciosdeVisa
+CuotadeReembolsode UnacuotadetransferenciaentreAdquirentesyEmisoresenla
+Intercambio(IRF) CompensaciónyLiquidacióndeunaTransaccióndeIntercambio
+No.deIdentificación:0024733 Edición:Oct2024|ÚltimaActualización:Oct2017
+CuotadeServicio UnacuotacobradaaunTarjetahabientequeusaunaTarjetaparapagar
+bienesyserviciosenunacategoríadeComerciopermitida.
+No.deIdentificación:0030125 Edición:Oct2024|ÚltimaActualización:Abr2020
+CuotaOpcionaldelEmisor CuotaqueunEmisorpuedecobraraunTarjetahabientemediantela
+aplicacióndeunaumentodeporcentajealaTasadeConversiónde
+Moneda,queusanlosSistemasVisaparadeterminarelMontode
+TransacciónenlaMonedadeFacturaciónporcadaTransacción
+Internacional.
+No.deIdentificación:0029314 Edición:Oct2024|ÚltimaActualización:Abr2016
+CuotaporDesembolsode CuotaquepagaunEmisoraunAdquirenteporrealizarunDesembolso
+Efectivo deEfectivo.
+No.deIdentificación:0024409 Edición:Oct2024|ÚltimaActualización:Abr2010
+D
+DataTotaldeChip Datosquecumplencontodolosiguiente:
+l CumpleconlosrequisitosmínimosdeEMVCo
+l Apoyalavalidacióncriptográficaenlínea
+l RegistralasinteraccionesentrelaTarjetayelterminalquese
+efectúanduranteunaTransacción
+No.deIdentificación:0024662 Edición:Oct2024|ÚltimaActualización:Oct2016
+DatosdeAutenticación TodalainformaciónrelacionadaconlaTransacciónasociadaconuna
+SolicituddeAutenticacióndeVisaSecure.
+No.deIdentificación:0026423 Edición:Oct2024|ÚltimaActualización:Abr2019
+DatosdelaBanda DatosincluidosenlaBandaMagnéticayrepetidosenelChip.
+Magnética
+No.deIdentificación:0024802 Edición:Oct2024|ÚltimaActualización:Abr2010
+DatosMejorados DatossuministradosatravésdeVisaaunEmisor.Dichosdatospueden
+incluirunooambos:
+l InformaciónMejoradaaNiveldeComercio(incluyendo
+informaciónparaunEstablecimientodeComercioPatrocinadoo
+19deoctubredel2024 VisaConfidencial 1283
+Aviso:EstainformaciónesdepropiedadexclusivayCONFIDENCIALdeVisa.LamismaesdistribuidaalosparticipantesdeVisaparaserusadaexclusivamenteen
+laadministracióndesusprogramasdeVisa.Estainformaciónnopodráserduplicada,publicada,distribuidaodivulgada,ensutotalidadoenparte,acomercios,
+tarjetahabientesoaningunaotrapersonasinelprevioconsentimientoporescritodeVisa.©2014—2024Visa.TodoslosDerechosReservados
+
+--- Fragmento ID: 579 ---
+
+utotalidadoenparte,acomercios,
+tarjetahabientesoaningunaotrapersonasinelprevioconsentimientoporescritodeVisa.©2014—2024Visa.TodoslosDerechosReservados
+
+ReglasBásicasdeVisa
+1ReglasBásicasdeVisa
+ReglasBásicasdeVisayReglasdeProductosyServiciosdeVisa
+1.7.6.10 Requisitos de Pago de Transacciones Nacionales
+UnMiembroReceptortienequepagarelmontodeunaTransacciónNacionalválidamediante
+algunodelossiguientesmétodos:
+l PormediodeVisa
+l DirectamentealMiembroRemitente,porunAcuerdoPrivado
+l AunacuentadesignadaporVisa
+l EnlaRegióndeEuropa:UtilizandounProcesadordelSistemadeVisa
+No.deIdentificación:0005637 Edición:Oct2024|ÚltimaActualización:Oct2016
+1.7.6.11 Reembolso para Transacciones Válidas
+UnEmisortienequepagaralAdquirenteelmontodebidoparaTransaccionesqueresultandeluso
+deunaTarjetaválida.EstoincluyelasTransaccionesqueresultandelusodeunaTarjetarestringida
+geográficamentefueradelpaísdeemisión.
+No.deIdentificación:0006558 Edición:Oct2024|ÚltimaActualización:Oct2014
+1.7.6.12 Derecho de Visa de Imponer Obligaciones a los Miembros para Garantizar
+la Liquidación
+Visa,conformealdocumentoVisaInternationalCertificateofIncorporationandBy-Laws,puede
+imponerobligacionesfinancierasodeotrotipoaunMiembro,incluidaslasobligacionesfinancieras
+degarantíacolateralparacubrirlasobligacionesdeLiquidacióndelMiembroenrelaciónconlos
+sistemasdeLiquidaciónoperadosporVisa.SiunMiembronosatisfacelasobligacionesfinancieras
+adoptadasconformealdocumentoVisaInternationalCertificateofIncorporationandBy-Laws,Visa
+cobraráesasobligacionespormediodeunaTransaccióndeCobrodeCuotacomopartedela
+Liquidación.
+No.deIdentificación:0005627 Edición:Oct2024|ÚltimaActualización:Oct2016
+1.7.6.13 Acuerdos Nacionales de Liquidación
+LasreglasrelacionadasconliquidaciónquerigenlaLiquidaciónnacionalpuedensersustituidas
+completamenteoenparteparalaLiquidaciónnacionalporAcuerdosPrivadosoporlosreglamentos
+operativosdelosMiembrosdeGrupo.
+No.deIdentificación:0005610 Edición:Oct2024|ÚltimaActualización:Abr2015
+19deoctubredel2024 VisaConfidencial 198
+Aviso:EstainformaciónesdepropiedadexclusivayCONFIDENCIALdeVisa.LamismaesdistribuidaalosparticipantesdeVisaparaserusadaexclusivamenteen
+laadministracióndesusprogramasdeVisa.Estainformaciónnopodráserduplicada,publicada,distribuidaodivulgada,ensutotalidadoenparte,acomercios,
+tarjetahabientesoaningunaotrapersonasinelprevioconsentimientoporescritodeVisa.©2014—2024Visa.TodoslosDerechosReservados
+
+--- Fragmento ID: 1284 ---
+
+utotalidadoenparte,acomercios,
+tarjetahabientesoaningunaotrapersonasinelprevioconsentimientoporescritodeVisa.©2014—2024Visa.TodoslosDerechosReservados
+
+Glosario
+Glosario
+ReglasBásicasdeVisayReglasdeProductosyServiciosdeVisa
+AutenticaciónDinámica ValorcriptográficogeneradoporunChipenunaTarjetaenunambiente
+deDatos fueradelíneaqueutilizaelementosespecíficosdelosdatosdeuna
+TransacciónyesverificadoporunDispositivodeLecturadeChippara
+protegercontra“skimming.”
+No.deIdentificación:0024575 Edición:Oct2024|ÚltimaActualización:Abr2010
+Automatizaciónde SoluciónopcionalparaelpagoelectrónicoquelepermitealosEmisores
+CuentasporPagardeVisa automatizarlosprocesosdepagodesuscuentasalusarTarjetasVisa
+ComercialesyHerramientasdeDatosyPresentacióndeInformesde
+SolucionesComercialesdeVisa.
+No.deIdentificación:0026535 Edición:Oct2024|ÚltimaActualización:Oct2012
+Autorización UnprocesodondeunEmisor,unProcesadorVisaNet,Procesadorde
+SistemaVisaoelSistemadeRespaldodeVisaapruebanuna
+Transacción.EstoincluyeAutorizaciónFueradeLínea.
+No.deIdentificación:0024316 Edición:Oct2024|ÚltimaActualización:Oct2016
+Autorizaciónde UnaSolicituddeAutorizaciónparaunaunidaddedivisapresentadapor
+VerificacióndeCondición unComerciodeSurtidorAutomatizadodeCombustible.
+No.deIdentificación:0025130 Edición:Oct2024|ÚltimaActualización:Abr2016
+AutorizaciónFuerade ProcesocontroladoporelEmisorquepermitequeunaSolicitudde
+Línea AutorizacióniniciadaconChipseaprocesadaenunambientepor
+debajodelLímitedePisosinenviarlasolicituddeautorizaciónalEmisor.
+No.deIdentificación:0024898 Edición:Oct2024|ÚltimaActualización:Abr2010
+AutorizaciónParcial Unarespuestadeaprobaciónenviadaporunmontomenorqueel
+montosolicitadoporunComercioparaunaTransacción.
+No.deIdentificación:0024929 Edición:Oct2024|ÚltimaActualización:Oct2023
+AvisodeConfirmacióndel MensajequeenvíaunAdquirenteaunEmisorconfirmandoelMontode
+Adquirente Transacciónfinal.
+No.deIdentificación:0026794 Edición:Oct2024|ÚltimaActualización:Oct2017
+B
+BancoIntermediario Institucióndepositante,especificadaporunMiembrooporVisa,a
+travésdelacual,sedeberánprocesarlastransferenciasdefondospara
+acreditarlacuentadeCompensacióndeotrainstitucióndedepósitos.
+No.deIdentificación:0024741 Edición:Oct2024|ÚltimaActualización:Abr2010
+19deoctubredel2024 VisaConfidencial 1264
+Aviso:EstainformaciónesdepropiedadexclusivayCONFIDENCIALdeVisa.LamismaesdistribuidaalosparticipantesdeVisaparaserusadaexclusivamenteen
+laadministracióndesusprogramasdeVisa.Estainformaciónnopodráserduplicada,publicada,distribuidaodivulgada,ensutotalidadoenparte,acomercios,
+tarjetahabientesoaningunaotrapersonasinelprevioconsentimientoporescritodeVisa.©2014—2024Visa.TodoslosDerechosReservados
+
+--- Fragmento ID: 1285 ---
+
+utotalidadoenparte,acomercios,
+tarjetahabientesoaningunaotrapersonasinelprevioconsentimientoporescritodeVisa.©2014—2024Visa.TodoslosDerechosReservados
+
+Glosario
+Glosario
+ReglasBásicasdeVisayReglasdeProductosyServiciosdeVisa
+BancoLiquidador Banco,incluyendounBancoCorresponsalounBancoIntermediario,
+queestá,ambosdelossiguientes:
+l LocalizadoenelpaísdondelaDivisadeLiquidacióndelMiembroes
+lamonedanacional
+l AutorizadopararealizarlaLiquidacióndelIntercambioanombre
+delMiembroodelbancodelMiembro.
+No.deIdentificación:0025097 Edición:Oct2024|ÚltimaActualización:Oct2014
+BancoLiquidadordeVisa BancodondeVisamantienesuscuentasdeLiquidaciónydesempeña
+transferenciasdefondosparaLiquidación.
+No.deIdentificación:0025391 Edición:Oct2024|ÚltimaActualización:Abr2010
+BancoPrincipal UnProgramaMultinacionaldeVisaqueiniciaunarelaciónconunBanco
+SocioanombredeunclientedeunaCompañíaMultinacional.
+No.deIdentificación:0026026 Edición:Oct2024|ÚltimaActualización:Oct2020
+BancoSocio DentrodelProgramaMultinacionaldeVisa,unbancoubicadoenun
+paísqueesdiferentedeunBancoPrincipalyemiteproductosde
+TarjetasVisaComercialanombredelBancoPrincipal.
+No.deIdentificación:0026029 Edición:Oct2024|ÚltimaActualización:Oct2020
+BandaMagnética BandamagnéticaenunaTarjetaquecontienelainformaciónnecesaria
+paracompletarunaTransacción.
+No.deIdentificación:0024808 Edición:Oct2024|ÚltimaActualización:Abr2010
+BanderadelaSelecciónde EspecificacióndelanormaEMVparalaindustriacanadiensedepagos
+laAplicación–Regiónde quepermiteaunEmisorcontrolarcuálesdelasaplicacionesdepago
+Canadá contenidasenunaTarjetaconChipConformepuedeprocesaruna
+TransacciónenunPOSounATM.
+No.deIdentificación:0024284 Edición:Oct2024|ÚltimaActualización:Oct2014
+BASEII UnserviciodeVisaNetbasadoenarchivosqueconstadefuncionespara
+recopilar,compensar,liquidaryentregararchivosdeactividadfinanciera
+ynofinancieraentreVisayMiembros.
+No.deIdentificación:0024341 Edición:Oct2024|ÚltimaActualización:Oct2021
+BeneficiariodeConfianza EnlaRegióndeEuropa:Unaentidadcatalogadacomodeconfianzapor
+–RegióndeEuropa unTarjetahabientedeacuerdoconlasleyesoregulaciones
+correspondientes.
+19deoctubredel2024 VisaConfidencial 1265
+Aviso:EstainformaciónesdepropiedadexclusivayCONFIDENCIALdeVisa.LamismaesdistribuidaalosparticipantesdeVisaparaserusadaexclusivamenteen
+laadministracióndesusprogramasdeVisa.Estainformaciónnopodráserduplicada,publicada,distribuidaodivulgada,ensutotalidadoenparte,acomercios,
+tarjetahabientesoaningunaotrapersonasinelprevioconsentimientoporescritodeVisa.©2014—2024Visa.TodoslosDerechosReservados
+
+--- Fragmento ID: 37 ---
+
+Visa Business News
+3 de octubre del 2024 | ALC (excepto Brasil, Chile), AP, ECMOA, Europa
+Se Introducirá una Cuota del Programa de Control e Informes de
+Fraude (FRECOP)
+Resumen: A partir de abril del 2025, Visa establecerá una cuota y una puntuación de riesgo elevado para los
+emisores que no informen el fraude con exactitud o en su totalidad.
+La presentación de informes de fraude por parte del emisor es
+De un Vistazo
+crucial para Visa y para el ecosistema de pagos en general. La
+presentación precisa de informes sobre el fraude ayuda a Público Impacto
+desarrollar mejores modelos y decisiones más inteligentes que Emisores
+reducen el fraude y promueven el crecimiento, impulsan Medidas requeridas
+Procesadores
+aprobaciones seguras mediante el uso de perspectivas
+significativas y comparaciones con las tendencias del mercado Fechas Clave
+y permiten una evaluación de desempeño personalizada de las
+• 12 de abril del 2025: Cuota FRECOP efectiva en
+herramientas de prevención de fraude de Visa para el negocio
+ALC (excepto Brasil y Chile), AP, ECMOA y Europa
+del emisor. Visa ha evitado USD 40 mil millones1 en pérdidas para emisores que informen fraude de manera
+por fraude a nivel mundial para el ecosistema, y los modelos de inexacta o incompleta
+prevención de fraude de Visa han permitido además a los
+Redes Impactos Especiales
+emisores evitar USD 28,8 mil millones2 en pérdidas por fraude a
+Procesamiento de
+nivel mundial anualmente. Visa Network  
+Europa
+En julio del 2024, Visa lanzó el Programa de Control e Informes Afecta a los
+Interlink Network 
+de Fraude (Fraud Reporting and Control Program, FRECOP) Comercios
+para promover el cumplimiento de los requisitos de
+Impacto
+Plus Network  
+presentación de informes descritos en las Reglas de Visa. El Regulatorio
+programa tiene como objetivo asegurar que los clientes
+V PAY  Impacto de BER
+informen de manera exacta y completa todo el fraude, lo cual
+beneficia tanto a los clientes como a Visa. Categoría Tipo de Artículo
+Actualización al artículo
+Fraude
+A partir de julio del 2024, Visa comenzó a interactuar AI14094
+proactivamente mensualmente con clientes que muestran
+Productos/Sistemas Impactados
+indicaciones de presentación de informes de fraude inexactos
+o incompletos a través del programa FRECOP. FRECOP, presentación de informes de fraude
+Para promover el cumplimiento con los requisitos de Visa para la presentación de informes de fraude, se
+actualizarán las Reglas de Visa efectivo a partir del 12 de abril del 2025 a fin de implementar una puntuación de
+riesgo elevado y la cuota Issuer Fraud Reporting Reliability Fee (cuota FRECOP) para emisores que no informen el
+fraude con exactitud (No. de Identificación: 0002389). La cuota FRECOP será de 1 bp del volumen de pagos total
+para transacciones con tarjeta no presente por cada mes en que el cliente sea identificado en el programa.
+1 Datos de Visa, octubre del 2022 – septiembre del 2023
+2 Datos globales de VisaNet, julio del 2022 – julio del 2023
+Número de Identificación del Artículo: AI14494
+
+--- Fragmento ID: 89 ---
+
+Visa Business News
+14 de noviembre del 2024 | Global
+Temas de Actualidad Relacionados con la Resolución de
+Controversias—Noviembre del 2024
+Resumen: Diseñada para ayudar a los clientes con sus operaciones internas, la edición más reciente de los temas
+de actualidad relacionados con la resolución de controversias incluye orientación sobre controversias y otros
+recordatorios y anuncios importantes.
+Visa está comprometida a ofrecer información actualizada en
+De un Vistazo
+materia de controversias para ayudar a los clientes con sus
+operaciones internas. Público Impacto
+Adquirentes
+Para todas las controversias, los clientes deben cumplir con las
+Emisores
+Reglas de Visa (o cualquier otra guía o documento relacionado
+Solo para estar al tanto
+con controversias que Visa proporcione, basado en las Reglas Procesadores
+de Visa) y deben proporcionar la información y/o
+Agentes
+documentación de apoyo adecuada. A menos que se indique
+Redes Impactos Especiales
+lo contrario, la siguiente información aplica a todas las regiones
+de Visa. Procesamiento de
+Visa Network 
+Europa
+Optimización del Arbitraje: Mejorando su Interlink Network  Afecta a los Comercios
+Estrategia de Arbitraje con Visa
+Plus Network  Impacto Regulatorio
+V PAY Impacto de BER
+El nuevo servicio de Optimización del Arbitraje está diseñado
+para dar a los clientes acceso a expertos de Visa en Categoría Tipo de Artículo
+controversias y permitirles entender la mejor manera de
+Resolución de
+mejorar la eficacia en la etapa de arbitraje. El servicio incluye un Nuevo
+Controversias
+análisis integral de los casos de arbitraje, identificando las
+Productos/Sistemas Impactados
+razones de los casos ganados/perdidos y la reducción de las
+cantidades de controversias perdidas. Los clientes reciben Reglas de Visa, controversias, arbitraje
+orientación personalizada para mejorar el uso y la eficacia del
+arbitraje, maximizando el valor de sus servicios de arbitraje.
+Visite la página Visa Dispute Optimization en Visa Access (antes Visa Online) para obtener más información. Para
+más información, comuníquese con su Representante de Visa o envíe un correo electrónico a VDO@visa.com.
+Mercancía No Recibida
+En controversias de transacciones cara a cara donde el adquirente confirma que el tarjetahabiente tomó posesión
+de la mercancía, el emisor tiene que explicar en su pre-arbitraje por qué el tarjetahabiente afirma no haber recibido
+la mercancía. Esto aplica cuando la transacción ocurrió en un ambiente de tarjeta presente con Modos de Entrada
+en POS 90, 05, 07 o 91.
+Además, si la mercancía estaba programada para ser entregada o recogida en una fecha u hora posterior, el emisor
+tiene que proporcionar evidencia que respalde esta reclamación. El hecho de no cumplir con estos requisitos
+podría provocar un fallo desfavorable.
+Número de Identificación del Artículo: AI14611
+
+--- Fragmento ID: 84 ---
+
+Visa Business News
+31 de octubre del 2024 | ALC (excepto Chile)
+Se Activará el Servicio Visa Stop Payment Service para Emisores en ALC
+Resumen: Visa activará el servicio Visa Stop Payment Service (VSPS) para emisores en ALC (excepto Chile),
+efectivo a partir del 13 de marzo del 2025. Esta activación no aplicará a los productos empresariales, comerciales o
+prepagados no recargables. Los clientes que deseen optar por no participar en VSPS tienen que notificar a Visa
+comunicándose con su representante de Visa antes del 15 de enero del 2025.
+Efectivo a partir del 13 de marzo del 2025, Visa activará el servicio
+De un Vistazo
+VSPS para emisores en ALC (excepto Chile). VSPS es un servicio
+de valor agregado basado en VisaNet y diseñado para reducir el Público Impacto
+número de controversias por transacciones recurrentes, de Opción de no participar
+Emisores
+pago a plazos y con credencial en archivo (COF) al permitir a los disponible
+emisores detener pagos no deseados o no autorizados para
+Fechas Clave
+que no se debiten de la cuenta de un tarjetahabiente.
+• 15 de enero del 2025: Plazo para optar por no participar
+en VSPS a fin de evitar cuotas de configuración
+El rápido aumento de los tipos de transacciones con
+suscripción y credencial archivada aguzó los desafíos • 13 de marzo del 2025: Activación de VSPS
+operativos, aumentando el riesgo y la demanda de que los
+Redes Impactos Especiales
+tarjetahabientes tengan mejor visibilidad y control sobre sus
+Procesamiento de
+finanzas. VSPS empodera a los clientes para protegerse contra Visa Network 
+Europa
+los pagos que ya no están autorizados, cumplir con las
+regulaciones de pago nacionales cuando corresponda y Afecta a los
+Interlink Network
+monitorear los resultados. Comercios
+Plus Network Impacto Regulatorio
+Las capacidades mejoradas proporcionadas por VSPS ayudan a
+V PAY Impacto de BER
+mejorar el control de fraude y la administración de riesgos;
+reducir el número de cuentas cerradas, controversias y Categoría Tipo de Artículo
+cancelaciones en libros; y facilitar el crecimiento en la categoría
+Procesamiento Nuevo
+de pagos recurrentes y a plazos, además de brindar a los
+Productos / Sistemas Impactados
+tarjetahabientes una mejor experiencia de usuario y
+posiblemente aumentar la confianza y la lealtad. Visa Stop Payment Service
+Impacto para los Clientes
+Para activar a los emisores en VSPS, Visa va a:
+• Habilitar la suscripción a VSPS para todos los Números de Identificación Bancaria (BINes) de emisores elegibles
+en ALC (excepto Chile), a menos que los emisores opten por no participar antes del 15 de enero del 2025 (ver la
+sección Proceso para Optar por No Participar más abajo para conocer los detalles).
+• Crear una organización (cuenta) del emisor en VSPS por número de Identificación del Negocio (BID) del emisor,
+accesible a través de Visa Access (anteriormente Visa Online), por los administradores del emisor. La
+información del administrador del emisor se copiará de la información de Visa Resolve Online (VROL).
+Número de Identificación del Artículo: AI14607
+
+--- Fragmento ID: 197 ---
+
+Visa Business News
+12 de diciembre del 2024 | Global
+Se Introducirán Ventanas de Mantenimiento Semanal para EAS-D y el
+Mantenimiento de la Red Global
+Resumen: A partir del 1° de mayo del 2025, Visa introducirá distintas ventanas de mantenimiento semanal
+específicas para que todos los puntos finales globales de Visa realicen actividades de red y del servidor de acceso
+ampliado Extended Access Server—Distributed (EAS-D). No se requiere ninguna acción por parte del cliente, pero
+los clientes deben estar al tanto de las mejores prácticas para el mantenimiento.
+Efectivo a partir del 1° de mayo del 2025, Visa introducirá
+De un Vistazo
+ventanas de mantenimiento específicas para EAS-D y para el
+mantenimiento de la red global. Público Impacto
+Adquirentes
+Deben estar al tanto de
+Generalidades del Mantenimiento Semanal de EAS-D
+Emisores los nuevos calendarios
+de mantenimiento
+Procesadores
+Visa implementará un calendario semanal de parcheo y
+remediación para los servidores EAS-D, incluso durante las Fechas Clave
+temporadas pico.
+• 1° de mayo del 2025: Implementación de nuevo
+calendario de ventanas de mantenimiento
+No se exigirá que los clientes acepten ni proporcionen ninguna
+ventana de mantenimiento. Redes Impactos Especiales
+Procesamiento de
+Visa Network 
+Detalles de Mantenimiento Semanal Europa
+Interlink Network Afecta a los Comercios
+Calendario de mantenimiento:
+Plus Network Impacto Regulatorio
+• Habrá dos ventanas de mantenimiento fijas semanales por V PAY Impacto de BER
+sitio (ver los plazos de la Ventana 1 y la Ventana 2 en la tabla
+Categoría Tipo de Artículo
+a continuación). Visa proporcionará la ventana específica
+de cada sitio dentro de esos plazos en una comunicación Operaciones Nuevo
+por separado.
+Productos/Sistemas Impactados
+• No se permitirá volver a programar debido a la naturaleza EAS-D, EAS-C, DPS, DEX
+crítica de mantener la postura de ciberseguridad de Visa. Se espera que los clientes sigan las mejores prácticas
+para garantizar la seguridad e integridad de los sistemas de Visa.
+Proceso de notificación:
+• Visa no enviará notificaciones de recordatorio y espera que los clientes anticipen el mantenimiento cada semana.
+• Es posible que Visa no use las ventanas todas las semanas, pero no enviará notificaciones si no se realiza el
+mantenimiento.
+• Visa no programará llamadas técnicas durante el mantenimiento con los clientes.
+Número de Identificación del Artículo: AI14775
+
+--- Fragmento ID: 567 ---
+
+Contenido
+ReglasBásicasdeVisayReglasdeProductosyServiciosdeVisa
+1.7.5Compensación 194
+1.7.6Liquidación 195
+1.7.7ReversosyAjustes 199
+1.8Intercambio 200
+1.8.1DeterminaciónyPagodelaCuotadeReembolsodeIntercambio(IRF) 200
+1.8.2AjustesyCumplimientodelaCuotadeReembolsodeIntercambio(IRF) 202
+1.8.3CuotasdeReembolsodeIntercambio(IRF)–RegióndeEuropa 204
+1.9Riesgo 206
+1.9.1ReduccióndeRiesgosCorporativos 206
+1.9.2RiesgoparalaIntegridad 212
+1.9.3Investigaciones 213
+1.9.4SeguridaddelaInformación 215
+1.9.5ActividaddeAltoRiesgoparalaMarca 218
+1.9.6TarjetasRecuperadas 219
+1.9.7PérdidasporFalsificación 219
+1.9.8Agentes 220
+1.9.9FabricaciónyDistribucióndeTarjetas 223
+1.10ResolucióndeControversias 226
+1.10.1Controversias 226
+1.10.2ArbitrajeyCumplimiento 227
+1.11CuotasyRecargosporIncumplimiento 229
+1.11.1CobrodeCuotasporVisa 229
+1.11.2RecargosporIncumplimiento 230
+2 Administración de Licencias y de Identificación Numérica 238
+19deoctubredel2024 VisaConfidencial 5
+Aviso:EstainformaciónesdepropiedadexclusivayCONFIDENCIALdeVisa.LamismaesdistribuidaalosparticipantesdeVisaparaserusadaexclusivamenteen
+laadministracióndesusprogramasdeVisa.Estainformaciónnopodráserduplicada,publicada,distribuidaodivulgada,ensutotalidadoenparte,acomercios,
+tarjetahabientesoaningunaotrapersonasinelprevioconsentimientoporescritodeVisa.©2014—2024Visa.TodoslosDerechosReservados
+
+--- Fragmento ID: 568 ---
+
+utotalidadoenparte,acomercios,
+tarjetahabientesoaningunaotrapersonasinelprevioconsentimientoporescritodeVisa.©2014—2024Visa.TodoslosDerechosReservados
+
+Contenido
+ReglasBásicasdeVisayReglasdeProductosyServiciosdeVisa
+7.3.1RutadeAutorización 858
+7.3.2ParticipaciónenelServiciodeAutorización 858
+7.3.3ServiciosdeAutorizaciónProvistosporelMiembro 859
+7.3.4LímitesdeTiempoparalasRespuestasdeAutorización 861
+7.3.5UsodelArchivodeExcepción 862
+7.3.6NegacionesyReferidos 862
+7.3.7ReversosdeAutorizaciónyRetencionesdeAutorización 866
+7.3.8TarjetasVisadeDébitoconPIN 868
+7.3.9AutorizaciónParcial 868
+7.3.10NormasdeRespuestadeAutorización 876
+7.3.11VerificacióndeCuenta 882
+7.3.12RequisitosdePresentacióndeInformesdelMiembro 883
+7.3.13VisaAliasDirectoryService–RegióndeEuropa 884
+7.4ProcesamientodeTiposEspecíficosdeTransacciones 884
+7.4.1TransaccionesdeTransferenciadeFondosdeCuenta 884
+7.4.2DesembolsosManualesdeEfectivo 886
+7.4.3TransaccionesdeSurtidorAutomatizadodeCombustible 886
+7.4.4TransaccionesdePagodeFacturas 887
+7.4.5TransaccionesdeConversiónDinámicadeDivisas 888
+7.4.6TransaccionesdeJuegosdeAzaryApuestasenInternet 888
+7.4.7BilleterasDigitales“Staged”yBilleterasDigitalesdeValorAlmacenado 888
+7.4.8TransaccionesComercialesdeCuentasporPagar 895
+7.4.9TransaccionesenAmbientedeTarjetaAusente 895
+7.4.10TransaccionesdeTarjetaVisadeComprasInstitucionales 896
+19deoctubredel2024 VisaConfidencial 19
+Aviso:EstainformaciónesdepropiedadexclusivayCONFIDENCIALdeVisa.LamismaesdistribuidaalosparticipantesdeVisaparaserusadaexclusivamenteen
+laadministracióndesusprogramasdeVisa.Estainformaciónnopodráserduplicada,publicada,distribuidaodivulgada,ensutotalidadoenparte,acomercios,
+tarjetahabientesoaningunaotrapersonasinelprevioconsentimientoporescritodeVisa.©2014—2024Visa.TodoslosDerechosReservados
+
+--- Fragmento ID: 569 ---
+
+utotalidadoenparte,acomercios,
+tarjetahabientesoaningunaotrapersonasinelprevioconsentimientoporescritodeVisa.©2014—2024Visa.TodoslosDerechosReservados
+
+Contenido
+ReglasBásicasdeVisayReglasdeProductosyServiciosdeVisa
+7.4.11TransaccionesdeTarjetaVisadeFlota 896
+7.4.12TransaccionesconTarjetasVisaComerciales 897
+7.4.13TransaccionesconTarjetasVisaDrive 899
+7.4.14TransaccionesaBordo–RegióndeEuropa 899
+7.4.15ContenidodeSolicituddeAutorización–RegióndeEuropa(ReinoUnido) 899
+7.4.16TransaccionesRelacionadasconMonedaNoFiduciaria 900
+7.4.17ProcesamientodeTransaccionesdelSistemaVisa 904
+7.5Compensación 904
+7.5.1ProcesamientodeArchivos 904
+7.5.2ConversióndeDivisas 904
+7.5.3AjustesdeTransaccionesdeTarjetasVisadeDébitoAutenticadasconPIN–Región
+deUS 905
+7.5.4Reversos–RegióndeUS 905
+7.5.5RequisitosdeDatos 906
+7.5.6ProcesamientodeCompensaciónyReversos 907
+7.6LímitesdeTiempoyFechasdeProcesodelasTransacciones 908
+7.6.1LímitesdeTiempoparaProcesamiento 908
+7.7Liquidación 909
+7.7.1RequisitosparaTransferenciadeFondos 909
+7.7.2RequisitosdelServiciodeLiquidaciónNetaNacional(NNSS) 910
+7.7.3RequisitosdeLiquidación–RegióndeAP 911
+7.7.4RequisitosdeLiquidación–RegióndeEuropa 911
+7.7.5RequisitosdeLiquidación–RegióndeALC 921
+7.7.6RequisitosdeLiquidación–RegióndeUS 922
+19deoctubredel2024 VisaConfidencial 20
+Aviso:EstainformaciónesdepropiedadexclusivayCONFIDENCIALdeVisa.LamismaesdistribuidaalosparticipantesdeVisaparaserusadaexclusivamenteen
+laadministracióndesusprogramasdeVisa.Estainformaciónnopodráserduplicada,publicada,distribuidaodivulgada,ensutotalidadoenparte,acomercios,
+tarjetahabientesoaningunaotrapersonasinelprevioconsentimientoporescritodeVisa.©2014—2024Visa.TodoslosDerechosReservados
+
+--- Fragmento ID: 570 ---
+
+utotalidadoenparte,acomercios,
+tarjetahabientesoaningunaotrapersonasinelprevioconsentimientoporescritodeVisa.©2014—2024Visa.TodoslosDerechosReservados
+
+Contenido
+ReglasBásicasdeVisayReglasdeProductosyServiciosdeVisa
+7.7.7PreparacióndelMiembroparalaLiquidación 924
+7.8UsodelSistema–RegióndeEuropa 924
+7.8.1InfraestructuraPredeterminada–RegióndeEuropa 924
+7.9ContenidodeTransaccionesdeAutorizaciónyCompensación 925
+7.9.1ContenidodelMensajedeTransacción 925
+7.9.2ServiciodeSuspensióndePago 925
+7.10AutenticaciónFuertedeClientes 926
+7.10.1AutenticaciónFuertedeClientes–RequisitosGenerales 926
+7.10.2RequisitosdeAutenticaciónparaEmisores–RegióndeAP 927
+7.10.3ProgramadeAutenticaciónDelegada–RegióndeEuropa 927
+7.11MarcodeAutenticaciónDigitaldeVisa 929
+7.11.1RequisitosdelMarcodeAutenticaciónDigitaldeVisa 929
+8 Procesamiento de Productos 934
+8.1UsodelosSistemasdeVisa 934
+8.1.1PuntosdeAccesoVisaNet 934
+8.1.2ConexiónDirectaconVisaNet 935
+8.1.3CambiosalSistema 935
+8.2ProgramasdeLealtaddelTarjetahabiente 936
+8.2.1ServiciosdelaPlataformadeLealtaddeVisa 936
+8.2.2OfertasVinculadasaTarjetas–RegióndeEuropa 936
+8.3SistemasdeInformacióndeVisa 938
+8.3.1VisaOnline 938
+8.3.2VisaAnalyticsPlatform 939
+8.4TransaccionesdeCréditoOriginal 939
+19deoctubredel2024 VisaConfidencial 21
+Aviso:EstainformaciónesdepropiedadexclusivayCONFIDENCIALdeVisa.LamismaesdistribuidaalosparticipantesdeVisaparaserusadaexclusivamenteen
+laadministracióndesusprogramasdeVisa.Estainformaciónnopodráserduplicada,publicada,distribuidaodivulgada,ensutotalidadoenparte,acomercios,
+tarjetahabientesoaningunaotrapersonasinelprevioconsentimientoporescritodeVisa.©2014—2024Visa.TodoslosDerechosReservados
+
+--- Fragmento ID: 1269 ---
+
+Introducción
+ReglasBásicasdeVisayReglasdeProductosyServiciosdeVisa
+deIdentificacióndeNegociodelMiembroysunúmerodeteléfono.
+No.deIdentificación:0020318 Edición:Oct2024|ÚltimaActualización:Oct2015
+19deoctubredel2024 VisaConfidencial 97
+Aviso:EstainformaciónesdepropiedadexclusivayCONFIDENCIALdeVisa.LamismaesdistribuidaalosparticipantesdeVisaparaserusadaexclusivamenteen
+laadministracióndesusprogramasdeVisa.Estainformaciónnopodráserduplicada,publicada,distribuidaodivulgada,ensutotalidadoenparte,acomercios,
+tarjetahabientesoaningunaotrapersonasinelprevioconsentimientoporescritodeVisa.©2014—2024Visa.TodoslosDerechosReservados
+
+--- Fragmento ID: 1270 ---
+
+utotalidadoenparte,acomercios,
+tarjetahabientesoaningunaotrapersonasinelprevioconsentimientoporescritodeVisa.©2014—2024Visa.TodoslosDerechosReservados
+
+ReglasBásicasdeVisa
+1ReglasBásicasdeVisa
+ReglasBásicasdeVisayReglasdeProductosyServiciosdeVisa
+1.4.3.2 Divulgación de Cuotas de Transacción Internacional o Conversión de Divisas
+UnEmisortienequeproporcionarunanotificacióncompletaporescritodecualquiercuotaque
+puedacobrarseaunTarjetahabienteporunaTransacciónInternacionalocuandoocurrauna
+ConversióndeMoneda,eincluirlatasadecambioentrelaMonedadeTransacciónylaMonedade
+Facturación,yasea:
+l UnatasaseleccionadaporVisaentrelasdisponiblesenlosmercadosmayoristasdedivisasparala
+Transacciónaplicable,tasaquepuedeserdiferentedelaqueVisarecibe
+l Latasaoficialdecambiodefinidacomoobligatoriaporungobiernouorganismogubernamental
+envigorparalaTransaccióncorrespondiente1
+CuandoseproduceunaConversióndeMoneda,latasadeVisapuedeajustarsemediantela
+aplicacióndeunaTasaOpcionaldelEmisordeterminadaporelEmisoromediantecualquier
+aumentoautodeterminadoporelEmisorfueradeVisaNet.
+UnEmisorpuedeescogerelmétodomedianteelcualvaanotificaralTarjetahabiente.Puedeincluir
+unoomásdelossiguientes,quepuedeincluirformularioselectrónicosdecomunicación:
+l ConvenioOriginaldesolicituddelTarjetahabiente
+l TérminosyCondiciones
+l EstadodeCuentadeFacturación
+l CualquierotroconvenioentreelTarjetahabienteyelEmisor
+EnlaRegióndeECMOA:Además,unEmisordeTarjetasVisa,TarjetasdePropiedadquellevenel
+SímboloPlusyTarjetasquellevenlaMarcaVisaconelIdentificadorElectrónico,debenotificarasu
+Titularporescritolosiguiente:
+l TarifasycargosespecíficosqueseaplicaránalTarjetahabiente,cuandocorresponda,incluidos
+todoslossiguientes:
+– Cuotaanual
+– CargoporDesembolsodeEfectivoenCajerosAutomáticos
+– Cargoporcopiasadicionalesdelestadodecuenta
+– Tipo(s)deinterés,siprocede
+– Cargoporpagoatrasado
+– Cargopordesembolsomanualdeefectivo
+– CargaporreemplazodePIN
+19deoctubredel2024 VisaConfidencial 161
+Aviso:EstainformaciónesdepropiedadexclusivayCONFIDENCIALdeVisa.LamismaesdistribuidaalosparticipantesdeVisaparaserusadaexclusivamenteen
+laadministracióndesusprogramasdeVisa.Estainformaciónnopodráserduplicada,publicada,distribuidaodivulgada,ensutotalidadoenparte,acomercios,
+tarjetahabientesoaningunaotrapersonasinelprevioconsentimientoporescritodeVisa.©2014—2024Visa.TodoslosDerechosReservados
+
+--- Fragmento ID: 1271 ---
+
+utotalidadoenparte,acomercios,
+tarjetahabientesoaningunaotrapersonasinelprevioconsentimientoporescritodeVisa.©2014—2024Visa.TodoslosDerechosReservados
+
+ReglasBásicasdeVisa
+1ReglasBásicasdeVisa
+ReglasBásicasdeVisayReglasdeProductosyServiciosdeVisa
+l
+ParaunaTransacciónInterregional,aplicalatasainterregional1correspondiente.
+l
+ParaunaTransacciónIntrarregional,aplicalatasaintrarregional1correspondiente.
+l
+ParaunaTransacciónNacional,aplicanlastasassegúnseindicaacontinuación:1
+– EncasodehaberunAcuerdoPrivado,unAcuerdoBilateralAdministradoporVisaounacuerdo
+bilateral(dondeestépermitido),aplicalatasaacordada.
+– SiexisteunacuerdocomercialconVisa(dondeestépermitido),aplicalatasaacordada.
+– Aplicalatasanacionalcorrespondiente.
+– SinoexisteunestructuradeIRFnacional,aplicalatasaintrarregionalointerregional
+correspondiente.
+UnMiembroesresponsabledeasegurarquerecibey/oproveelasCuotasdeReembolsode
+Intercambio(IRF)apropiadasparacadaTransacción.
+1 OunatasaespecificadaporVisaparaelProductoVisaCommercialChoiceTraveloelProductoVisaCommercialChoice
+Omni
+No.deIdentificación:0005584 Edición:Oct2024|ÚltimaActualización:Oct2023
+1.8.1.2 ¿Qué es el Intercambio? – Regiones de ALC, AP, Canadá, ECMOA y US
+EnlaRegióndeALC,laRegióndeAP,laRegióndeCanadá,laRegióndeECMOA,laRegióndeUS:
+LasCuotasdeReembolsodeIntercambio(IRF)ayudanaqueseaposibleefectuarpagoselectrónicos
+alpermitiraVisaexpandirlatitularidadyelusodeTarjetas,aumentandoloslugaresdondelos
+consumidorespuedanusarsusTarjetas,yproporcionandounincentivofinancieroatodoslos
+participantesparalabúsquedademejorasentodoelsistema,talescomorecompensas,
+innovacionesymejorasdeseguridad.UnaCuotadeReembolsodeIntercambioesunpreciode
+transferenciapredeterminadoentreAdquirentesyEmisoresdentrodelsistemaVisa.LosComercios
+paganloqueseconocecomocuotadedescuentodelcomercioocuotadeserviciodelcomercio
+negociadaconsuAdquirentequepuedetenerencuentalacuotadeintercambio,loscostosde
+procesamiento,lascuotasporelalquilerdeterminales,serviciosalclienteyotrosservicios
+financieros.Lacuotadedescuentodelcomercioocuotadeserviciodelcomerciosenegocia
+individualmenteconelAdquirentedelComercio;cadaAdquirenteestablecesuscuotasdemanera
+independiente,encompetenciaconotrosAdquirentes,sistemasdepagodelacompetenciayotras
+formasdepago.
+ElIntercambiosemonitoreayajustademaneraconstante,algunasvecesseaumentayotrasse
+reduce,paragarantizarquelapropuestaeconómicapresentadagenerevalorcompetitivoparatodos
+losparticipantes.LasCuotasdeReembolsodeIntercambiotienenquefomentarlatitularidadyeluso
+deTarjetas,asícomoalaexpansiónenelnúmeroytiposdenegociosqueaceptanTarjetas.Silas
+tasassondemasiadoaltas,losminoristasnoaceptaránTarjetas;silastasassondemasiadobajas,los
+Emisoresnoemitirántarjetas.VisapuedeestablecerdiferentesCuotasdeReembolsodeIntercambio
+19deoctubredel2024 VisaConfidencial 201
+Aviso:EstainformaciónesdepropiedadexclusivayCONFIDENCIALdeVisa.LamismaesdistribuidaalosparticipantesdeVisaparaserusadaexclusivamenteen
+laadministracióndesusprogramasdeVisa.Estainformaciónnopodráserduplicada,publicada,distribuidaodivulgada,ensutotalidadoenparte,acomercios,
+tarjetahabientesoaningunaotrapersonasinelprevioconsentimientoporescritodeVisa.©2014—2024Visa.TodoslosDerechosReservados
+
+--- Fragmento ID: 1272 ---
+
+utotalidadoenparte,acomercios,
+tarjetahabientesoaningunaotrapersonasinelprevioconsentimientoporescritodeVisa.©2014—2024Visa.TodoslosDerechosReservados
+
+ReglasdeProductosyServiciosdeVisa
+4Emisión
+ReglasBásicasdeVisayReglasdeProductosyServiciosdeVisa
+l Lascuentasnuevas(abiertasdentrodelos180días)enunprogramaderecompensascalificado
+comoVisaSignaturePreferredserándesignadascomoVisaSignaturePreferreddurantelos
+primeros6meses.
+l Lacuentatieneunhistorialdegastode12mesesomásyelgastoenpuntosdeventacumplecon
+elumbraldeUSD50.000enlos12mesesconsecutivosmásrecientesalmomentodelacalificación
+degasto.
+l Silacuentatieneunhistorialdegastodeentre6y12meses,seharáunaproyeccióndelgastode
+lacuenta,utilizandounametodologíadeproyeccióndeterminadaporVisa,sobrelabasedeun
+promedioponderadoparaelnúmerodedíasenquehapermanecidoabiertalacuenta.Sielgasto
+proyectadode12mesesesdeUSD50.000,lacuentaserádesignadacomoVisaSignature
+Preferredhastalapróximaevaluacióndegastosemestral.
+ParaunaTransaccióndegastoelegible,quesedefinecomounaTransaccióndecompraenpuntode
+venta,sinincluirlasdevolucionesdemercancía,procesadaconunamismaCredencialdePago,se
+excluyenambosdelossiguientesenlaevaluacióndegastoelegible:
+l LasTransaccionesdepuntodeventarealizadasconunaCuentaVirtualnoseránincluidascomo
+gastoelegible.
+l LosDesembolsosManualesdeEfectivoylosDesembolsosdeEfectivoenCajerosAutomáticosno
+seránincluidoscomogastoelegiblealosefectosdecumplirconlosrequisitosdelproductode
+TarjetaVisaSignaturePreferred.
+LoscriteriosdegastoanualaplicanaunaCredencialdePagodeTarjetadeCréditoVisade
+Consumidor,yaseaquelacuentaseaindividualoconjunta.
+ElgastoanualelegibledelTarjetahabientetienequeserenunacuentadeTarjetaVisaSignature
+Preferredelegibleo,enelcasodeunaconversióndecuentaplanificada,enotrotipodecuentade
+TarjetadeCréditoVisadeConsumidor.
+SiunEmisorutilizalaagregacióndecuentasparavincularlascuentasdeCréditodeConsumidorpara
+lacalificacióndegastodeVisaSignaturePreferred,tienequehacertodolosiguiente:
+l Agregarsolamentecuentasquetenganelmismousuarioprincipal.
+l AgregarsolamenteproductosdeCréditodeConsumidorenlosBINesdeTarjetadeCréditode
+Consumidor.
+l AsegurarquelavinculacióndecuentasseaapoyadautilizandoelArchivodeMantenimientodel
+Tarjetahabiente.
+No.deIdentificación:0028117 Edición:Oct2024|ÚltimaActualización:Oct2020
+19deoctubredel2024 VisaConfidencial 420
+Aviso:EstainformaciónesdepropiedadexclusivayCONFIDENCIALdeVisa.LamismaesdistribuidaalosparticipantesdeVisaparaserusadaexclusivamenteenla
+administracióndesusprogramasdeVisa.Estainformaciónnopodráserduplicada,publicada,distribuidaodivulgada,ensutotalidadoenparte,acomercios,
+tarjetahabientesoaningunaotrapersonasinelprevioconsentimientoporescritodeVisa.©2014—2024Visa.TodoslosDerechosReservados
+
+--- Fragmento ID: 467 ---
+
+Contenido
+ReglasBásicasdeVisayReglasdeProductosyServiciosdeVisa
+1.3.4Mercadeo,PromociónyMaterialesdePublicidad 153
+1.4Emisión 158
+1.4.1CondicionesdeEmisión 158
+1.4.2NúmerosdeCuenta 160
+1.4.3NotificaciónyDivulgación 160
+1.4.4NormasOperativasdelEmisor 163
+1.4.5NotificaciónaVisadePérdidaoRobo 165
+1.4.6CeroResponsabilidad 166
+1.5Aceptación 167
+1.5.1RequisitosGeneralesdelAdquirente 167
+1.5.2AcuerdosdeComercio 174
+1.5.3ExhibicióndeMarcas 174
+1.5.4AceptacióndeTarjetas 175
+1.5.5ProhibicionesdeAceptacióndeTarjetas 184
+1.5.6RecibosdeTransacción 186
+1.5.7DepósitosdeComercios 186
+1.5.8ChequesdeViajero 189
+1.6CajeroAutomático 190
+1.6.1RequisitosdeCajerosAutomáticos 190
+1.7ProcesamientodeTransacciones 190
+1.7.1ProcesamientoGeneral 190
+1.7.2RequisitosdeDatos 191
+1.7.3SolicitudesdeAutorizacióndelAdquirente 192
+1.7.4ProcesamientodeAutorizacióndelEmisor 192
+19deoctubredel2024 VisaConfidencial 4
+Aviso:EstainformaciónesdepropiedadexclusivayCONFIDENCIALdeVisa.LamismaesdistribuidaalosparticipantesdeVisaparaserusadaexclusivamenteen
+laadministracióndesusprogramasdeVisa.Estainformaciónnopodráserduplicada,publicada,distribuidaodivulgada,ensutotalidadoenparte,acomercios,
+tarjetahabientesoaningunaotrapersonasinelprevioconsentimientoporescritodeVisa.©2014—2024Visa.TodoslosDerechosReservados
+
+--- Fragmento ID: 468 ---
+
+utotalidadoenparte,acomercios,
+tarjetahabientesoaningunaotrapersonasinelprevioconsentimientoporescritodeVisa.©2014—2024Visa.TodoslosDerechosReservados
+
+Contenido
+ReglasBásicasdeVisayReglasdeProductosyServiciosdeVisa
+2.9TransferenciadeLicenciasenlaUE 258
+2.9.1TransferenciadeLicenciasenlaUE–RegióndeEuropa 258
+3 Uso de Marcas 259
+3.1LicenciadeMarcas 259
+3.1.1ProgramasdeTarjetasdeAfinidad/MarcaCompartida 259
+3.1.2OtorgamientodeLicenciadeMarcas 260
+3.1.3PatrociniosyAsociaciones,IncluyendolasOlimpíadas 260
+3.2UsodeMarcas 261
+3.2.1UsodeMarcasporMiembrosyComercios 261
+3.2.2UsodeMarcasenPromociones,AvisosPublicitariosySolicitudes 263
+3.2.3UsodeMarcasenTarjetas 263
+3.3OtrosRequisitosdeTarjetas 265
+3.3.1CodificacióndelaBandaMagnética 265
+3.4PuntodeTransacción–ExhibicióndeMarcas 266
+3.4.1ExhibicióndeMarcasenelPuntodeVenta 266
+4 Emisión 268
+4.1EmisiónenGeneral 268
+4.1.1RequisitosGeneralesdelEmisor 268
+4.1.2EmisióndeTarjetasVisadeCrédito 299
+4.1.3EmisióndeTarjetasVisaCargo 305
+4.1.4EmisióndeTarjetasdeDébito 305
+4.1.5EmisióndeTarjetasPrepagadas 307
+4.1.6EmisióndeTarjetasdeAfinidad/MarcaCompartidayMarcaCompartidaMundial 307
+4.1.7NormasparalaProduccióndeTarjetas 312
+19deoctubredel2024 VisaConfidencial 7
+Aviso:EstainformaciónesdepropiedadexclusivayCONFIDENCIALdeVisa.LamismaesdistribuidaalosparticipantesdeVisaparaserusadaexclusivamenteen
+laadministracióndesusprogramasdeVisa.Estainformaciónnopodráserduplicada,publicada,distribuidaodivulgada,ensutotalidadoenparte,acomercios,
+tarjetahabientesoaningunaotrapersonasinelprevioconsentimientoporescritodeVisa.©2014—2024Visa.TodoslosDerechosReservados
+
+--- Fragmento ID: 469 ---
+
+utotalidadoenparte,acomercios,
+tarjetahabientesoaningunaotrapersonasinelprevioconsentimientoporescritodeVisa.©2014—2024Visa.TodoslosDerechosReservados
+
+Contenido
+ReglasBásicasdeVisayReglasdeProductosyServiciosdeVisa
+4.1.8CuentasVirtuales 313
+4.1.9DivulgacionesporpartedelEmisor 314
+4.1.10ConfidencialidaddelaInformacióndelTarjetahabiente 318
+4.1.11RequisitosdelPIN 319
+4.1.12RetenciónyTransmisióndeInformación 321
+4.1.13CréditoProvisional/CeroResponsabilidad 322
+4.1.14RequisitosdelEmisorparalaPrestacióndelServiciodeEmergencia 327
+4.1.15Seguro/Beneficios 332
+4.1.16HacerClicparaPagar 339
+4.1.17ServiciodeTokendeVisa 342
+4.1.18ProgramadeHabilitaciónDigitaldeVisa 350
+4.1.19RequisitosparaEmisióndeTarjetasconChip 352
+4.1.20RequisitosparalaBilleteraDigital“Pass-Through” 376
+4.1.21ControlesdelTarjetahabiente 377
+4.1.22ProveedoresdeSolucionesdePago 378
+4.1.23PersonalizacióndeTarjetas–RegióndeEuropa 380
+4.1.24VisaMobile 380
+4.2VisaElectron 380
+4.2.1RequisitosdelEmisordeTarjetasVisaElectron 380
+4.3TarjetaVisaCheck 382
+4.3.1TarjetasVisaCheck–RequisitosdelEmisor 382
+4.3.2TarjetaconGarantía–RequisitosdelEmisor 383
+4.4TarjetaVisadeOro 384
+4.4.1TarjetaVisadeOro–RequisitosdelEmisor 384
+19deoctubredel2024 VisaConfidencial 8
+Aviso:EstainformaciónesdepropiedadexclusivayCONFIDENCIALdeVisa.LamismaesdistribuidaalosparticipantesdeVisaparaserusadaexclusivamenteen
+laadministracióndesusprogramasdeVisa.Estainformaciónnopodráserduplicada,publicada,distribuidaodivulgada,ensutotalidadoenparte,acomercios,
+tarjetahabientesoaningunaotrapersonasinelprevioconsentimientoporescritodeVisa.©2014—2024Visa.TodoslosDerechosReservados
+
+--- Fragmento ID: 470 ---
+
+utotalidadoenparte,acomercios,
+tarjetahabientesoaningunaotrapersonasinelprevioconsentimientoporescritodeVisa.©2014—2024Visa.TodoslosDerechosReservados
+
+Contenido
+ReglasBásicasdeVisayReglasdeProductosyServiciosdeVisa
+4.9.4TarjetasVisaInfinite/VisaInfinitePrivilege–CaracterísticasyBeneficios 462
+4.10VisaPrivate 483
+4.10.1VisaPrivate–RequisitosparaTarjetas 483
+4.10.2VisaPrivate–RequisitosdelEmisor 484
+4.10.3VisaPrivate–CaracterísticasyBeneficios 485
+4.11TarjetaVisadeUltraHighNetWorth 486
+4.11.1TarjetaVisadeUltraHighNetWorth–RequisitosdelaTarjeta 486
+4.11.2TarjetaVisadeUltraHighNetWorth–RequisitosdeServicioalCliente 487
+4.11.3TarjetaVisadeUltraHighNetWorth–RequisitosdelEmisor 487
+4.11.4TarjetaVisadeUltraHighNetWorth–CaracterísticasyBeneficios 489
+4.12TarjetaCampus 493
+4.12.1TarjetaCampus–RequisitosdelEmisor 493
+4.13Prepago 496
+4.13.1TarjetasPrepagadas–RequisitosdelEmisor 496
+4.13.2TarjetasPrepagadas–UsodeAgentes/ControlesdeRiesgos 503
+4.13.3TarjetasPrepagadas–ProgramasdeAfinidad/MarcaCompartida 503
+4.13.4TarjetasPrepagadasdeRemesas–DistribucióndeTarjetasFueradelPaísde
+Emisión 504
+4.13.5TarjetasPrepagadas–DistribucióndeTarjetasFueradelPaísdeEmisión 505
+4.13.6TarjetasPrepagadas–ServiciosdeAutorización/AccesoalosFondos 506
+4.13.7SociosdeTarjetasPrepagadas 507
+4.13.8TarjetasPrepagadas–UsoGeneral/RequisitosdeCarga 514
+4.13.9TarjetasPrepagadas–ServiciosdeCarga 516
+4.13.10TarjetasPrepagadas–VisaTravelMoney 517
+19deoctubredel2024 VisaConfidencial 10
+Aviso:EstainformaciónesdepropiedadexclusivayCONFIDENCIALdeVisa.LamismaesdistribuidaalosparticipantesdeVisaparaserusadaexclusivamenteen
+laadministracióndesusprogramasdeVisa.Estainformaciónnopodráserduplicada,publicada,distribuidaodivulgada,ensutotalidadoenparte,acomercios,
+tarjetahabientesoaningunaotrapersonasinelprevioconsentimientoporescritodeVisa.©2014—2024Visa.TodoslosDerechosReservados","Visa ha diseñado esta nueva estructura de precios como parte de la migración de la plataforma Visa Payables Automation (VPA) hacia Visa B2B Payables, con el objetivo de modernizar y optimizar la automatización de pagos comerciales. Los emisores que anteriormente utilizaban VPA deberán realizar la transición obligatoria a la nueva plataforma dentro de VCS Hub antes de septiembre de 2025. Este cambio busca reducir costos operativos para empresas con altos volúmenes de pago, aunque las tarifas fijas mensuales pueden representar una barrera para empresas más pequeñas. Estos detalles están documentados en AI14562_SP.pdf.",0.021359223300970873,0.4520547945205479

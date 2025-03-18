@@ -4,41 +4,41 @@
 
 ### Componente de Recuperación (Retrieval)
 - **Relevancia de Contexto**: 
-  - Media: 0.0000
-  - Desviación estándar: 0.0000
+  - Media: 0.0214
+  - Desviación estándar: nan
 - **Recall de Contexto**: 
-  - Media: 0.0000
-  - Desviación estándar: 0.0000
+  - Media: 0.4521
+  - Desviación estándar: nan
 
 ### Componente de Generación (Generation)
 - **Fidelidad**: 
-  - Media: 0.5224
-  - Desviación estándar: 0.1044
+  - Media: 0.0884
+  - Desviación estándar: nan
 - **Relevancia de Respuesta**: 
-  - Media: 0.4120
-  - Desviación estándar: 0.0350
+  - Media: 0.1105
+  - Desviación estándar: nan
 
 ## 2. Análisis de Ejemplos
 
 ### Mejor Caso de Recuperación (Retrieval)
-- **Pregunta**: ¿Qué impacto tiene el aumento de las tarifas de aceptación de Visa en comercios de alto riesgo?
-- **Relevancia**: 0.0000
-- **Recall**: 0.0000
+- **Pregunta**: ¿Cuál es la nueva estructura de precios de Visa B2B Payables y cómo impacta a los emisores?
+- **Relevancia**: 0.0214
+- **Recall**: 0.4521
 
 ### Peor Caso de Recuperación (Retrieval)
-- **Pregunta**: ¿Qué impacto tiene el aumento de las tarifas de aceptación de Visa en comercios de alto riesgo?
-- **Relevancia**: 0.0000
-- **Recall**: 0.0000
+- **Pregunta**: ¿Cuál es la nueva estructura de precios de Visa B2B Payables y cómo impacta a los emisores?
+- **Relevancia**: 0.0214
+- **Recall**: 0.4521
 
 ### Mejor Caso de Generación (Generation)
-- **Pregunta**: ¿Qué impacto tiene la nueva tasa de acceso a la Sala Visa Infinite Lounge en Brasil y cuál es el incremento porcentual?
-- **Fidelidad**: 0.6792
-- **Relevancia**: 0.4340
+- **Pregunta**: ¿Cuál es la nueva estructura de precios de Visa B2B Payables y cómo impacta a los emisores?
+- **Fidelidad**: 0.0884
+- **Relevancia**: 0.1105
 
 ### Peor Caso de Generación (Generation)
-- **Pregunta**: ¿Cuáles son las nuevas tasas de intercambio (IRF) aplicables en 2025?
-- **Fidelidad**: 0.3590
-- **Relevancia**: 0.3846
+- **Pregunta**: ¿Cuál es la nueva estructura de precios de Visa B2B Payables y cómo impacta a los emisores?
+- **Fidelidad**: 0.0884
+- **Relevancia**: 0.1105
 
 ## 3. Distribución de Puntuaciones
 - **Retrieval**: 

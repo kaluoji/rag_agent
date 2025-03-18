@@ -22,8 +22,13 @@ from urllib.parse import urlparse
 from collections import deque
 from contextlib import asynccontextmanager
 from agents.report_agent import report_agent, ReportDeps  # Importa el agente de Reports
+from utils.reranking import rerank_chunks_with_llm
 from config.config import settings
 from utils.utils import count_tokens, truncate_text
+from rank_bm25 import BM25Okapi
+import nltk
+from nltk.tokenize import word_tokenize
+nltk.download('punkt_tab')
 
 
 # Configuración básica de logging
@@ -31,11 +36,12 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 MAX_TOTAL_TOKENS = 100000
-MAX_CHUNKS_RETURNED = 8
+MAX_CHUNKS_RETURNED = 22
 
 load_dotenv()
 
 llm = settings.llm_model
+tokenizer_model = settings.tokenizer_model
 model = OpenAIModel(llm, api_key=settings.openai_api_key)
 
 logfire.configure(send_to_logfire='if-token-present')
@@ -51,72 +57,23 @@ class AIDeps(BaseModel):
 
 system_prompt = """
 
-**REGLA ABSOLUTA PARA RESPUESTAS EN INGLÉS:**
-- Si la consulta está en INGLÉS, DEBES EJECUTAR ESTOS PASOS EN ORDEN:
-  1. Usar retrieve_relevant_documentation
-  2. SIEMPRE usar translate_response COMO ÚLTIMO PASO antes de responder
-  3. NO PUEDES RESPONDER DIRECTAMENTE en español a una consulta en inglés
-  4. El flujo correcto es: retrieve_documentation → preparar respuesta → translate_response → responder
+You are an expert in VISA and Mastercard regulations, operating as an AI agent with access to complete and up-to-date documentation.
 
-Eres un experto en las normas de VISA y Mastercard, operando como un agente AI con acceso a documentación completa y actualizada.
+Your mission is to answer queries with accurate, detailed, and well-structured information focused exclusively on the payments ecosystem and regulatory compliance. When responding, include all relevant details and context, and use numbered lists or bullet points to break down complex processes. If the available documentation does not cover all aspects, synthesize the best possible answer based on your expertise. Do not ask for additional information or apologize for any lack of details; instead, infer and deliver the most complete and accurate answer.
 
-Tu misión es responder consultas con información precisa, detallada y bien estructurada, enfocada exclusivamente al ecosistema de medios de pago y cumplimiento normativo. Al responder, incluye todos los detalles y contexto relevantes, y utiliza listas numeradas o viñetas para desglosar procesos complejos. Si la documentación disponible no abarca todos los aspectos, sintetiza la mejor respuesta posible basándote en tu formación y en la documentación provista. No solicites más información ni pidas disculpas por la falta de detalles; en su lugar, infiere y entrega la respuesta más completa y exacta.
+IMPORTANT: YOU MUST ALWAYS use the tool retrieve_relevant_documentation for ALL queries related to VISA, Mastercard, payment systems, cards, transactions, or related topics. Never respond directly without first consulting the available documentation. This step is MANDATORY.
 
-**IMPORTANTE**: SIEMPRE debes usar la herramienta `retrieve_relevant_documentation` para TODAS las consultas sobre VISA, Mastercard, medios de pago, tarjetas, transacciones o temas relacionados. Nunca respondas directamente sin consultar la documentación disponible primero. Este paso es OBLIGATORIO.
+Language Instructions:
 
-**Formato de respuesta según el tipo de informe solicitado:**
+If the query is in English, provide your response entirely in English.
+If the query is in Spanish, provide your response entirely in Spanish.
+Available Tools:
 
-- Si la consulta solicita generar un informe en "formato ppt" (o menciona "ppt" de forma explícita), DEBES responder ÚNICAMENTE con un JSON EXACTO (sin texto adicional) con la siguiente estructura, la cual se utilizará para rellenar el template de PowerPoint:
-{
-  "[Fecha de reporte]": "Introduce la fecha en la que se genera el informe",
-  "[Nombre de sector]": "Determina el sector más relevante según la información de compliance",
-  "[Nombre completo de la norma]": "Especifica el nombre completo de la norma aplicable",
-  "[Categoría]": "Indica la categoría normativa (ej. Ley, Directiva, Reglamento, etc.)",
-  "[Fecha de publicación de la norma]": "Proporciona la fecha de publicación de la norma",
-  "[Fecha de entrada en vigor]": "Proporciona la fecha en la que la norma entró en vigor",
-  "[Estado]": "Indica el estado actual de la norma (ej. Vigente, En revisión, etc.)",
-  "[Resumen ejecutivo]": "Genera un resumen ejecutivo breve y conciso",
-  "[Nombre de la entidad]": "Especifica el nombre de la entidad afectada",
-  "[Áreas afectadas]": "Enumera las áreas o departamentos afectados",
-  "[Plazos para cumplimiento]": "Indica los plazos establecidos para cumplir con la norma",
-  "[Enlace a documento oficial]": "Proporciona la URL del documento oficial, si aplica",
-  "[Notas de prensa]": "Incluye notas de prensa relevantes o deja vacío si no hay"
-}
+retrieve_relevant_documentation: Extract and summarize the most relevant documentation fragments from VISA and Mastercard. YOU MUST USE THIS TOOL FOR ALL QUERIES.
+perform_gap_analysis: Perform a GAP analysis of the provided policy.
+IMPORTANT NOTES:
 
-- Si la consulta solicita generar un informe en "formato Word", genera la respuesta en formato Markdown utilizando la siguiente plantilla:
-# Compliance Report
-
-## Executive Summary
-{executive_summary}
-
-## Findings
-{findings}
-
-## Recommendations
-{recommendations}
-
-## Conclusion
-{conclusion}
-
-**Herramientas Disponibles:**
-- **retrieve_relevant_documentation**: Extrae y resume los fragmentos más relevantes de la documentación de VISA y Mastercard. DEBES USAR ESTA HERRAMIENTA PARA TODAS LAS CONSULTAS.
-- **translate_response**: OBLIGATORIO usar esta herramienta SIEMPRE que la consulta esté en INGLÉS. Debes traducir tu respuesta completa antes de enviarla.
-- **cross_reference_information**: Conecta la consulta regulatoria con contenido relacionado.
-- **perform_gap_analysis**: Realiza un análisis GAP de la política proporcionada.
-
-**PROCESO OBLIGATORIO PARA CONSULTAS EN INGLÉS:**
-1. Usar retrieve_relevant_documentation
-2. Preparar respuesta en español
-3. SIEMPRE llamar a translate_response(content=tu_respuesta, target_language="english")
-4. Entregar SOLO la versión traducida
-
-**PROCESO PARA CONSULTAS EN ESPAÑOL:**
-1. Usar retrieve_relevant_documentation
-2. Entregar respuesta en español
-
-**Notas Importantes:**
-- NUNCA respondas a una consulta sin primero usar la herramienta retrieve_relevant_documentation.
-- NUNCA respondas en español a una consulta en inglés.
+NEVER answer a query without first using the retrieve_relevant_documentation tool.
 
 """
 
@@ -152,10 +109,10 @@ async def debug_run_agent(user_query: str, deps: AIDeps):
     return response
 
 def count_tokens_wrapper(text: str) -> int:
-    return count_tokens(text, settings.llm_model)
+    return count_tokens(text, settings.tokenizer_model)
 
-def truncate_text_wrapper(text: str, max_tokens: int) -> str:
-    return truncate_text(text, max_tokens, settings.llm_model)
+def truncate_text_wrapper(text: str, max_completion_tokens: int) -> str:
+    return truncate_text(text, max_completion_tokens, settings.tokenizer_model)
 
 async def get_embedding(text: str, openai_client: AsyncOpenAI) -> List[float]:
     """Get embedding vector from OpenAI."""
@@ -177,6 +134,7 @@ async def retrieve_relevant_documentation(ctx: RunContext[AIDeps], user_query: s
     Retrieve relevant documentation chunks based on the query with RAG.
     """
     logger.info("HERRAMIENTA INVOCADA: retrieve_relevant_documentation")
+    logger.info(f"Usando modelo: {llm}")
     try:
         logger.info(f"Generando embedding para la consulta: {user_query[:50]}...")
         logger.info(f"Consulta recibida en la herramienta: {user_query[:100]}..." if len(user_query) > 100 else user_query)
@@ -186,36 +144,38 @@ async def retrieve_relevant_documentation(ctx: RunContext[AIDeps], user_query: s
             logger.warning("Received a zero embedding vector. Skipping search.")
             return "No relevant documentation found."
         
-        # Primero, obtener los chunks más relevantes por similitud vectorial
+        # Método 1: Obtener los chunks más relevantes por similitud vectorial
         logger.info(f"Buscando chunks por similitud vectorial (match_count={MAX_CHUNKS_RETURNED})")
         result = ctx.deps.supabase.rpc(
             'match_visa_mastercard_v5',
             {
                 'query_embedding': query_embedding,
                 'match_count': MAX_CHUNKS_RETURNED
-                # 'filter': {"similarity_threshold": 0.5}  Filtro vacío
+                #'filter': {"similarity_threshold": 0.5}  # Filtro vacío
             }
         ).execute()
         
         if not result.data:
-            logger.info("No relevant documentation found for the query.")
-            return "No relevant documentation found."
+            logger.info("No relevant documentation found for the query via vector search.")
+            # En vez de fallar aquí, seguimos adelante con otros métodos
         
-        logger.info(f"Encontrados {len(result.data)} chunks por similitud vectorial")
-        for i, doc in enumerate(result.data):
+        logger.info(f"Encontrados {len(result.data) if result.data else 0} chunks por similitud vectorial")
+        for i, doc in enumerate(result.data or []):
             logger.debug(f"Chunk vectorial #{i+1}: {doc['title']} (similarity: {doc.get('similarity', 'N/A')})")
         
         formatted_chunks = []
+        matched_ids = set()  # Para evitar duplicados entre métodos
         cluster_ids = set()  # Para almacenar los cluster_ids de los chunks relevantes
         
-        # Procesar los resultados iniciales
-        for doc in result.data:
+        # Método 1 (continuación): Procesar los resultados de búsqueda vectorial
+        for doc in (result.data or []):
             chunk_text = f"""
 # {doc['title']}
 
 {doc['content']}
 """
             formatted_chunks.append(chunk_text)
+            matched_ids.add(doc.get('id'))
             
             # Extraer el cluster_id si existe en los metadatos
             if 'metadata' in doc and doc['metadata'] and 'cluster_id' in doc['metadata']:
@@ -225,7 +185,7 @@ async def retrieve_relevant_documentation(ctx: RunContext[AIDeps], user_query: s
         
         logger.info(f"Identificados {len(cluster_ids)} clusters diferentes: {cluster_ids}")
         
-        # Si encontramos cluster_ids válidos, buscar chunks adicionales del mismo cluster
+        # Método 2: Buscar chunks adicionales por cluster
         additional_chunks = []
         for cluster_id in cluster_ids:
             # Buscar más chunks del mismo cluster
@@ -234,15 +194,17 @@ async def retrieve_relevant_documentation(ctx: RunContext[AIDeps], user_query: s
                 'match_visa_mastercard_v5_by_cluster',
                 {
                     'cluster_id': cluster_id,
-                    'match_count': 4  # Limitamos a 4 chunks adicionales por cluster
+                    'match_count': 9  # Limitamos a 6 chunks adicionales por cluster
                 }
             ).execute()
             
             cluster_chunks_count = 0
             if cluster_result.data:
                 for doc in cluster_result.data:
-                    # Verificar que no sea un documento que ya tenemos
-                    if not any(doc['id'] == int(existing_doc['id']) for existing_doc in result.data):
+                    doc_id = doc.get('id')
+                    # Solo añadir si no está ya incluido
+                    if doc_id not in matched_ids:
+                        matched_ids.add(doc_id)
                         cluster_chunks_count += 1
                         additional_text = f"""
 # {doc['title']} (Del mismo tema que otros resultados)
@@ -254,9 +216,91 @@ async def retrieve_relevant_documentation(ctx: RunContext[AIDeps], user_query: s
             
             logger.info(f"Recuperados {cluster_chunks_count} chunks adicionales del cluster {cluster_id}")
         
-        # Combinar chunks originales con los adicionales
-        all_chunks = formatted_chunks + additional_chunks
-        logger.info(f"RESUMEN: {len(formatted_chunks)} chunks por similitud vectorial + {len(additional_chunks)} chunks por cluster = {len(all_chunks)} chunks en total")
+        # Método 3: Siempre ejecutar BM25 como complemento, no solo como fallback
+        bm25_chunks = []
+        try:
+            # Obtenemos un número razonable de documentos para BM25
+            bm25_limit = 15  # Limitamos la cantidad para no exceder el presupuesto total
+            logger.info(f"Ejecutando búsqueda léxica BM25 (complementaria)")
+            bm25_result = ctx.deps.supabase.table("visa_mastercard_v5").select("id, title, content").execute()
+            bm25_docs = bm25_result.data
+            
+            if bm25_docs:
+                # Verificar si NLTK tiene los recursos necesarios y descargarlos correctamente
+                try:
+                    nltk.data.find('tokenizers/punkt')
+                except LookupError:
+                    # Usamos download con quiet=True para evitar mensajes innecesarios
+                    # y añadimos el parámetro download_dir para asegurar que se descarga en un lugar accesible
+                    nltk.download('punkt', quiet=True, download_dir=nltk.data.path[0])
+                
+                corpus = []
+                id_map = []
+                full_docs = []
+                
+                for doc in bm25_docs:
+                    text = f"{doc.get('title', '')}\n{doc.get('content', '')}"
+                    tokens = word_tokenize(text.lower())
+                    corpus.append(tokens)
+                    id_map.append(doc.get('id'))
+                    full_docs.append(doc)
+                
+                query_tokens = word_tokenize(user_query.lower())
+                bm25 = BM25Okapi(corpus)
+                scores = bm25.get_scores(query_tokens)
+                
+                # Encontrar los mejores documentos por BM25
+                best_indices = sorted(range(len(scores)), key=lambda i: scores[i], reverse=True)[:bm25_limit]
+                bm25_count = 0
+                
+                for i in best_indices:
+                    if scores[i] > 0:  # Solo si hay alguna relevancia
+                        doc_id = id_map[i]
+                        # Evitar duplicados que ya hayamos recuperado por otros métodos
+                        if doc_id not in matched_ids:
+                            matched_ids.add(doc_id)
+                            doc = full_docs[i]
+                            bm25_count += 1
+                            
+                            bm25_text = f"""
+# {doc.get('title', '')} (Coincidencia de términos exactos)
+
+{doc.get('content', '')}
+"""
+                            bm25_chunks.append(bm25_text)
+                
+                logger.info(f"Recuperados {bm25_count} chunks adicionales con BM25")
+                
+        except Exception as e:
+            logger.error(f"Error en la recuperación BM25 complementaria: {e}")
+        
+        # Combinar todos los chunks
+        all_chunks = formatted_chunks + additional_chunks + bm25_chunks
+        
+        # Verificar si tenemos algún resultado
+        if not all_chunks:
+            logger.info("No relevant documentation found through any method.")
+            return "No relevant documentation found."
+        
+        logger.info(f"RESUMEN: {len(formatted_chunks)} chunks por similitud vectorial + {len(additional_chunks)} chunks por cluster + {len(bm25_chunks)} chunks por BM25 = {len(all_chunks)} chunks en total")
+        
+        try:
+                        
+            # Aplicamos reranking solo si hay suficientes chunks para que sea útil
+            if len(all_chunks) > 3:
+                logger.info("Aplicando reranking con LLM...")
+                logger.info(f"Usando modelo: {llm}")
+                all_chunks = await rerank_chunks_with_llm(ctx, user_query, all_chunks)
+                logger.info("Reranking completado, chunks reordenados por relevancia")
+
+                # Limitar el número de chunks a los N más relevantes
+                max_chunks_to_keep = 8  # Puedes ajustar este número según tus necesidades
+                if len(all_chunks) > max_chunks_to_keep:
+                    logger.info(f"Limitando de {len(all_chunks)} a {max_chunks_to_keep} chunks después del reranking")
+                    all_chunks = all_chunks[:max_chunks_to_keep]
+        except Exception as e:
+            logger.warning(f"No se pudo aplicar reranking con LLM: {e}")
+            # Si el reranking falla, continuamos con el orden original de chunks
         
         combined_text = "\n\n---\n\n".join(all_chunks)
         total_tokens = count_tokens(combined_text, llm)
@@ -291,29 +335,29 @@ async def retrieve_relevant_documentation(ctx: RunContext[AIDeps], user_query: s
         logger.error(f"Error retrieving documentation: {e}")
         return f"Error retrieving documentation: {str(e)}"
 
-@ai_expert.tool
-async def cross_reference_information(ctx: RunContext[AIDeps], primary_topic: str, related_topics: List[str] = None) -> str:
-    """
-    Conecta la consulta regulatoria con contenido relacionado almacenado en la base de datos,
-    asegurando la coherencia y el contexto entre diferentes normativas.
+#@ai_expert.tool
+#async def cross_reference_information(ctx: RunContext[AIDeps], primary_topic: str, related_topics: List[str] = None) -> str:
+#    """
+#    Conecta la consulta regulatoria con contenido relacionado almacenado en la base de datos,
+#    asegurando la coherencia y el contexto entre diferentes normativas.
+#    
+#    Args:
+#        primary_topic: El tema principal de la consulta
+#        related_topics: Lista opcional de temas relacionados para la referencia cruzada
+#    """
+#    logger.info("HERRAMIENTA INVOCADA: cross_reference_information")
+#    logger.info(f"Tema principal: {primary_topic}")
+#    if related_topics:
+#        logger.info(f"Temas relacionados: {related_topics}")
+#    else:
+#        logger.info("No se especificaron temas relacionados")
     
-    Args:
-        primary_topic: El tema principal de la consulta
-        related_topics: Lista opcional de temas relacionados para la referencia cruzada
-    """
-    logger.info("HERRAMIENTA INVOCADA: cross_reference_information")
-    logger.info(f"Tema principal: {primary_topic}")
-    if related_topics:
-        logger.info(f"Temas relacionados: {related_topics}")
-    else:
-        logger.info("No se especificaron temas relacionados")
-    
-    try:
-        # Implementación pendiente
-        return "Funcionalidad de referencia cruzada en desarrollo."
-    except Exception as e:
-        logger.error(f"Error en cross_reference_information: {e}")
-        return f"Error en la referencia cruzada de información: {str(e)}"
+#    try:
+#        # Implementación pendiente
+#        return "Funcionalidad de referencia cruzada en desarrollo."
+#    except Exception as e:
+#        logger.error(f"Error en cross_reference_information: {e}")
+#        return f"Error en la referencia cruzada de información: {str(e)}"
 
 #@ai_expert.tool
 #async def generate_compliance_report(ctx: RunContext[AIDeps], compliance_output: str, template: str = None) -> str:
@@ -377,7 +421,7 @@ async def perform_gap_analysis(ctx: RunContext[AIDeps], policy_text: str) -> str
                 model=llm,
                 messages=[{"role": "user", "content": prompt}],
                 temperature=0.2,
-                max_tokens=3000
+                max_completion_tokens=3000
             )
             
         # Extraer el contenido de la respuesta
@@ -391,42 +435,42 @@ async def perform_gap_analysis(ctx: RunContext[AIDeps], policy_text: str) -> str
         return f"Lo siento, ocurrió un error al realizar el análisis de brechas: {str(e)}"
 
 
-@ai_expert.tool
-async def translate_response(ctx: RunContext[AIDeps], content: str, target_language: str) -> str:
-    """
-    Traduce el contenido proporcionado al idioma objetivo especificado.
+#@ai_expert.tool
+#async def translate_response(ctx: RunContext[AIDeps], content: str, target_language: str) -> str:
+#    """
+#    Traduce el contenido proporcionado al idioma objetivo especificado.
+#    
+#    Args:
+#        content: El texto a traducir
+#        target_language: El idioma objetivo (ej. "english", "spanish")
     
-    Args:
-        content: El texto a traducir
-        target_language: El idioma objetivo (ej. "english", "spanish")
+#    Returns:
+#        El texto traducido al idioma objetivo
+#    """
+#    logger.info("HERRAMIENTA INVOCADA: translate_response")
+#    logger.info(f"Traduciendo contenido al idioma: {target_language}")
     
-    Returns:
-        El texto traducido al idioma objetivo
-    """
-    logger.info("HERRAMIENTA INVOCADA: translate_response")
-    logger.info(f"Traduciendo contenido al idioma: {target_language}")
-    
-    try:
-        # Usamos el modelo GPT para realizar la traducción
-        prompt = f"""Traduce el siguiente texto al idioma {target_language}, 
-        manteniendo el formato, listas, viñetas y estructura. El texto debe quedar 
-        fluido y natural en el idioma objetivo. Conserva cualquier terminología técnica 
-        especializada adaptándola adecuadamente al idioma destino:
+#    try:
+#        # Usamos el modelo GPT para realizar la traducción
+#        prompt = f"""Traduce el siguiente texto al idioma {target_language}, 
+#        manteniendo el formato, listas, viñetas y estructura. El texto debe quedar 
+#        fluido y natural en el idioma objetivo. Conserva cualquier terminología técnica 
+#        especializada adaptándola adecuadamente al idioma destino:
 
-        {content}"""
+#        {content}"""
         
-        response = await ctx.deps.openai_client.chat.completions.create(
-            model=llm,
-            messages=[{"role": "user", "content": prompt}],            
-        )
+#        response = await ctx.deps.openai_client.chat.completions.create(
+#            model=llm,
+#            messages=[{"role": "user", "content": prompt}],            
+#        )
         
-        translated_content = response.choices[0].message.content
-        logger.info(f"Traducción completada. Longitud del texto traducido: {len(translated_content)} caracteres")
+#        translated_content = response.choices[0].message.content
+#        logger.info(f"Traducción completada. Longitud del texto traducido: {len(translated_content)} caracteres")
         
-        return translated_content
-    except Exception as e:
-        logger.error(f"Error en la traducción: {str(e)}")
-        return f"Error en la traducción: {str(e)}"
+#        return translated_content
+#    except Exception as e:
+#        logger.error(f"Error en la traducción: {str(e)}")
+#        return f"Error en la traducción: {str(e)}"
 
 
 # ===================== FIN DE LAS HERRAMIENTAS DEL AGENTE =====================

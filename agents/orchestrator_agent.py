@@ -22,7 +22,10 @@ logger = logging.getLogger(__name__)
 
 # Inicialización del modelo
 llm = settings.llm_model
-model = OpenAIModel(llm, api_key=settings.openai_api_key)
+model = OpenAIModel(
+    llm, 
+    api_key=settings.openai_api_key
+)
 
 class AgentType(str, Enum):
     """Tipos de agentes disponibles en el sistema."""
