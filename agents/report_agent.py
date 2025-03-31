@@ -77,102 +77,55 @@ report_agent = Agent(
     retries=2
 )
 
-#@report_agent.tool
-#async def create_compliance_report(ctx: RunContext[ReportDeps], compliance_output: str, template: str = None) -> str:
- #   """
- #   Genera un informe de compliance utilizando el output del Agente de Compliance y lo guarda como un archivo de Word.
- #   Retorna la ruta del archivo generado.
- #   """
- #   # Si no se proporciona una plantilla, se utiliza una por defecto (en Markdown)
- #   if template is None:
- #       template = (
- #           "# Compliance Report\n\n"
- #           "## Executive Summary\n"
- #           "{executive_summary}\n\n"
- #           "## Findings\n"
- #           "{findings}\n\n"
- #           "## Recommendations\n"
- #           "{recommendations}\n\n"
- #           "## Conclusion\n"
- #           "{conclusion}\n"
- #       )
+@report_agent.tool
+async def create_compliance_report(ctx: RunContext[ReportDeps], compliance_output: str, template: str = None) -> str:
+    """
+    Genera un informe de compliance utilizando el output del Agente de Compliance y lo guarda como un archivo de Word.
+    Retorna la ruta del archivo generado.
+    """
+    # Si no se proporciona una plantilla, se utiliza una por defecto (en Markdown)
+    if template is None:
+        template = (
+            "# Compliance Report\n\n"
+            "## Executive Summary\n"
+            "{executive_summary}\n\n"
+            "## Findings\n"
+            "{findings}\n\n"
+            "## Recommendations\n"
+            "{recommendations}\n\n"
+            "## Conclusion\n"
+            "{conclusion}\n"
+        )
     
     # Crear el prompt combinando el output y la plantilla
- #   prompt = (
- #       f"Con base en el siguiente análisis de compliance:\n\n{compliance_output}\n\n"
- #       "Genera UN INFORME FINAL y DETALLADO que incluya las secciones: Executive Summary, Findings, Recommendations y Conclusion. "
- #   "DEBERÁS devolver únicamente el informe final, sin solicitar acciones adicionales, sin invocar herramientas, ni generar instrucciones para continuar. "
- #   "Utiliza la siguiente plantilla y reemplaza cada placeholder con la información correspondiente:\n\n"
- #   f"{template}\n"
- #   )
+    prompt = (
+        f"Con base en el siguiente análisis de compliance:\n\n{compliance_output}\n\n"
+        "Genera UN INFORME FINAL y DETALLADO que incluya las secciones: Executive Summary, Findings, Recommendations y Conclusion. "
+    "DEBERÁS devolver únicamente el informe final, sin solicitar acciones adicionales, sin invocar herramientas, ni generar instrucciones para continuar. "
+    "Utiliza la siguiente plantilla y reemplaza cada placeholder con la información correspondiente:\n\n"
+    f"{template}\n"
+    )
 
     # Llamada al modelo (internamente, el agente genera el informe en formato Markdown)
- #   response = await report_agent.run(
- #       prompt, 
- #       deps=ReportDeps(openai_client=ctx.deps.openai_client),
- #       usage=ctx.usage)
- #   report_text = response.data
+    response = await report_agent.run(
+        prompt, 
+        deps=ReportDeps(openai_client=ctx.deps.openai_client),
+        usage=ctx.usage)
+    report_text = response.data
     
     # Asegurarse de que la carpeta output exista
- #   output_dir = os.path.join(os.getcwd(), "output")
- #   if not os.path.exists(output_dir):
- #       os.makedirs(output_dir)
+    output_dir = os.path.join(os.getcwd(), "output")
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
     
     # Definir el nombre del archivo con marca de tiempo
- #   file_name = f"compliance_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.docx"
- #   output_file = os.path.join(output_dir, file_name)
+    file_name = f"compliance_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.docx"
+    output_file = os.path.join(output_dir, file_name)
     
     # Guardar el informe como Word
- #   save_report_as_word(report_text, output_file)
+    save_report_as_word(report_text, output_file)
     
- #   return f"Informe generado y guardado en: {output_file}"
+    return f"Informe generado y guardado en: {output_file}"
 
-
-@report_agent.tool
-async def create_compliance_report_ppt(ctx: RunContext[ReportDeps], compliance_output: str = None, manual_placeholders: dict = None) -> str:
-    """
-    Genera un informe PPT basado en el output del agente de compliance.
-    """
-       
-    template_path = os.path.join(os.getcwd(), "templates", "Modelo reporte 1.pptx")
-    if not os.path.exists(template_path):
-        return "Error: No se encontró el template PPT en la ruta especificada."
-    
-    if manual_placeholders is None:
-        manual_placeholders = {}
-    
-    # Asegurarse de que compliance_output sea un string válido
-    if isinstance(compliance_output, dict):
-        compliance_output = json.dumps(compliance_output, ensure_ascii=False, indent=2)
-    elif compliance_output is None:
-        compliance_output = ""
-    
-    try:
-        complete_placeholders = await prepare_complete_placeholders(
-            manual_placeholders, 
-            compliance_output, 
-            template_path, 
-            ctx.deps.openai_client
-        )
-        output_path = generate_ppt_report(template_path, complete_placeholders)
-        return f"Informe generado y guardado en: {output_path}"
-    except Exception as e:
-        logger.error(f"Error generando el informe PPT: {str(e)}")
-        return f"Error generando el informe: {str(e)}"
-
-
-@report_agent.tool
-async def generate_compliance_report(ctx: RunContext[ReportDeps], compliance_output: str, template: str = None) -> str:
-    """
-    Delegar la generación del informe al agente de reportes.
-    """
-    
-    report_result = await report_agent.run(
-        compliance_output,
-        deps=ReportDeps(openai_client=ctx.deps.openai_client),  
-        usage=ctx.usage,
-        
-    )
-    return report_result.data
 
 

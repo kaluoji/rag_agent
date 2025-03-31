@@ -14,7 +14,7 @@ from supabase import Client
 from config.config import settings
 from agents.ai_expert_v1 import ai_expert, AIDeps, debug_run_agent  # Importamos la función debug_run_agent
 from agents.risk_assessment_agent import risk_assessment_agent, RiskAssessmentDeps
-from agents.report_agent import report_agent, ReportDeps
+from agents.normative_report_agent import normative_report_agent, ReportDeps as NormativeReportDeps, process_report_query
 
 # Configuración básica de logging
 logging.basicConfig(level=logging.INFO)
@@ -32,6 +32,7 @@ class AgentType(str, Enum):
     COMPLIANCE = "compliance"
     RISK_ASSESSMENT = "risk_assessment"
     REPORT = "report"
+    NORMATIVE_REPORT = "normative_report"
     
 
 class OrchestratorDeps(BaseModel):
@@ -79,12 +80,21 @@ Análisis de riesgos específicos del sector
 Recomendaciones para mitigar riesgos de compliance
 Realización de GAP analysis con respecto a la información de la BBDD
 
+Agente de Informes Normativos (NORMATIVE_REPORT) 
+Especialista en crear documentos Word con informes formales basados en normativas. Ideal para:
+- Generación de informes normativos en formato Word
+- Creación de documentos basados en plantillas predefinidas
+- Elaboración de documentos que sinteticen información normativa
+- Creación de entregables formales para clientes o reguladores
+- Solicitudes que mencionen explícitamente informes, documentos Word o reportes formales
+
 Instrucciones Clave:
-Enfócate en la intención principal de la consulta.
-Si la consulta toca varias áreas, prioriza la necesidad más relevante o el objetivo final del usuario.
-Si la consulta requiere un GAP analysis respecto a la normativa de BBDD, selecciona siempre al Agente COMPLIANCE.
-Para consultas generales sobre reglas de Visa o Mastercard, prioriza igualmente al Agente COMPLIANCE.
-Para consultas que soliciten explícitamente evaluación de riesgos por sector o análisis de áreas impactadas, prioriza el agente RISK_ASSESSMENT.
+- Enfócate en la intención principal de la consulta.
+- Si la consulta toca varias áreas, prioriza la necesidad más relevante o el objetivo final del usuario.
+- Si la consulta requiere un GAP analysis respecto a la normativa de BBDD, selecciona siempre al Agente COMPLIANCE.
+- Para consultas generales sobre reglas de Visa o Mastercard, prioriza igualmente al Agente COMPLIANCE.
+- Para consultas que soliciten explícitamente evaluación de riesgos por sector o análisis de áreas impactadas, prioriza el agente RISK_ASSESSMENT.
+- Para solicitudes que mencionen la necesidad de un documento Word, informe formal, reporte en formato editable o que hagan referencia a plantillas, selecciona el agente NORMATIVE_REPORT.
 
 Importante:
 No respondas directamente la consulta del usuario.
@@ -103,15 +113,6 @@ async def route_to_agent(agent_info: AgentInfo, deps: OrchestratorDeps, query: s
     """
     Enruta la consulta al agente adecuado según el análisis del orquestador.
     """
-    # Verificación para consultas en inglés
-    english_keywords = ["what", "how", "when", "where", "who", "why", "which", "is", "are", "can", "could", "do", "does"]
-    is_english = any(keyword.lower() in query.lower().split() for keyword in english_keywords)
-    
-    # Forzar redirección a COMPLIANCE para todas las consultas en inglés
-    if is_english and agent_info.agent_type != AgentType.COMPLIANCE:
-        logger.warning(f"ORQUESTADOR: Consulta en inglés detectada, redirigiendo de {agent_info.agent_type} a COMPLIANCE")
-        agent_info.agent_type = AgentType.COMPLIANCE
-
     logger.info(f"Enrutando consulta al agente: {agent_info.agent_type} (confianza: {agent_info.confidence})")
     
     # Crear las dependencias para el agente de compliance
@@ -146,19 +147,32 @@ async def route_to_agent(agent_info: AgentInfo, deps: OrchestratorDeps, query: s
             additional_info={"usage": response.usage()}
         )
     
-    elif agent_info.agent_type == AgentType.REPORT:
-        # Redirigir al agente de informes
-        report_deps = ReportDeps(
+    elif agent_info.agent_type == AgentType.NORMATIVE_REPORT:
+        # Redirigir al agente de informes normativos
+        normative_report_deps = NormativeReportDeps(
+            supabase=deps.supabase,
             openai_client=deps.openai_client
         )
-        response = await report_agent.run(
-            query,
-            deps=report_deps
-        )
+        
+        # Extraer parámetros específicos si existen
+        template_name = agent_info.query_parameters.get("template_name", None)
+        
+        # Añadir información sobre la plantilla a la consulta si está disponible
+        enhanced_query = query
+        if template_name:
+            enhanced_query = f"{query}\n\nUsa la plantilla: {template_name}"
+        
+        # Procesar la consulta con el agente de informes normativos
+        response = await process_report_query(enhanced_query, deps=normative_report_deps)
+        
         return OrchestrationResult(
-            agent_used=AgentType.REPORT,
-            response=response.data,
-            additional_info={"report_type": agent_info.query_parameters.get("report_type", "word")}
+            agent_used=AgentType.NORMATIVE_REPORT,
+            response=response,
+            additional_info={
+                "template_used": template_name,
+                "document_format": response.format,
+                "filename": response.filename
+            }
         )
     
     else:

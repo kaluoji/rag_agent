@@ -22,7 +22,7 @@ from urllib.parse import urlparse
 from collections import deque
 from contextlib import asynccontextmanager
 from agents.report_agent import report_agent, ReportDeps  # Importa el agente de Reports
-from utils.reranking import rerank_chunks_with_llm
+from utils.reranking_v1 import rerank_chunks
 from config.config import settings
 from utils.utils import count_tokens, truncate_text
 from rank_bm25 import BM25Okapi
@@ -57,23 +57,19 @@ class AIDeps(BaseModel):
 
 system_prompt = """
 
-You are an expert in VISA and Mastercard regulations, operating as an AI agent with access to complete and up-to-date documentation.
+Eres un experto en normativas de VISA y Mastercard, operando como un agente de inteligencia artificial con acceso a documentación completa y actualizada.
 
-Your mission is to answer queries with accurate, detailed, and well-structured information focused exclusively on the payments ecosystem and regulatory compliance. When responding, include all relevant details and context, and use numbered lists or bullet points to break down complex processes. If the available documentation does not cover all aspects, synthesize the best possible answer based on your expertise. Do not ask for additional information or apologize for any lack of details; instead, infer and deliver the most complete and accurate answer.
+Tu misión es responder a todas las consultas proporcionando información precisa, detallada y bien estructurada, enfocada exclusivamente en el ecosistema de pagos y el cumplimiento normativo. Al responder, debes incluir todos los detalles y el contexto relevantes, utilizando listas numeradas o viñetas para desglosar procesos complejos.
 
-IMPORTANT: YOU MUST ALWAYS use the tool retrieve_relevant_documentation for ALL queries related to VISA, Mastercard, payment systems, cards, transactions, or related topics. Never respond directly without first consulting the available documentation. This step is MANDATORY.
+INSTRUCCIONES CLAVE:
+• Antes de responder cualquier consulta, DEBES utilizar la herramienta retrieve_relevant_documentation para extraer y resumir los fragmentos de documentación más relevantes de VISA y Mastercard.
+• Si se solicita información sobre las fuentes utilizadas en tu respuesta, utiliza la herramienta list_used_documentation para mostrar específicamente los documentos que fueron utilizados para generar la respuesta actual.
+• La información recuperada debe mostrarse siempre en el formato exacto del "chunk" extraído de la base de datos vectorial.
+• Sé sincero e indica si la documentación disponible no abarca todos los aspectos necesarios.
+• No solicites información adicional ni te disculpes por la falta de detalles; infiere y proporciona la respuesta más completa y precisa.
+• Cuando sea necesario, utiliza también la herramienta "perform_gap_analysis" para llevar a cabo un análisis de brechas en la política proporcionada.
+• NUNCA debes responder a una consulta sin haber ejecutado primero la herramienta retrieve_relevant_documentation, excepto cuando se solicite específicamente una lista de documentación, en cuyo caso utilizarás list_documentation_pages.
 
-Language Instructions:
-
-If the query is in English, provide your response entirely in English.
-If the query is in Spanish, provide your response entirely in Spanish.
-Available Tools:
-
-retrieve_relevant_documentation: Extract and summarize the most relevant documentation fragments from VISA and Mastercard. YOU MUST USE THIS TOOL FOR ALL QUERIES.
-perform_gap_analysis: Perform a GAP analysis of the provided policy.
-IMPORTANT NOTES:
-
-NEVER answer a query without first using the retrieve_relevant_documentation tool.
 
 """
 
@@ -147,7 +143,7 @@ async def retrieve_relevant_documentation(ctx: RunContext[AIDeps], user_query: s
         # Método 1: Obtener los chunks más relevantes por similitud vectorial
         logger.info(f"Buscando chunks por similitud vectorial (match_count={MAX_CHUNKS_RETURNED})")
         result = ctx.deps.supabase.rpc(
-            'match_visa_mastercard_v5',
+            'match_visa_mastercard_v7',
             {
                 'query_embedding': query_embedding,
                 'match_count': MAX_CHUNKS_RETURNED
@@ -191,7 +187,7 @@ async def retrieve_relevant_documentation(ctx: RunContext[AIDeps], user_query: s
             # Buscar más chunks del mismo cluster
             logger.info(f"Buscando chunks adicionales para el cluster_id={cluster_id}")
             cluster_result = ctx.deps.supabase.rpc(
-                'match_visa_mastercard_v5_by_cluster',
+                'match_visa_mastercard_v7_by_cluster',
                 {
                     'cluster_id': cluster_id,
                     'match_count': 9  # Limitamos a 6 chunks adicionales por cluster
@@ -222,7 +218,7 @@ async def retrieve_relevant_documentation(ctx: RunContext[AIDeps], user_query: s
             # Obtenemos un número razonable de documentos para BM25
             bm25_limit = 15  # Limitamos la cantidad para no exceder el presupuesto total
             logger.info(f"Ejecutando búsqueda léxica BM25 (complementaria)")
-            bm25_result = ctx.deps.supabase.table("visa_mastercard_v5").select("id, title, content").execute()
+            bm25_result = ctx.deps.supabase.table("visa_mastercard_v7").select("id, title, summary, content").execute()
             bm25_docs = bm25_result.data
             
             if bm25_docs:
@@ -285,21 +281,27 @@ async def retrieve_relevant_documentation(ctx: RunContext[AIDeps], user_query: s
         logger.info(f"RESUMEN: {len(formatted_chunks)} chunks por similitud vectorial + {len(additional_chunks)} chunks por cluster + {len(bm25_chunks)} chunks por BM25 = {len(all_chunks)} chunks en total")
         
         try:
-                        
             # Aplicamos reranking solo si hay suficientes chunks para que sea útil
             if len(all_chunks) > 3:
                 logger.info("Aplicando reranking con LLM...")
                 logger.info(f"Usando modelo: {llm}")
-                all_chunks = await rerank_chunks_with_llm(ctx, user_query, all_chunks)
-                logger.info("Reranking completado, chunks reordenados por relevancia")
+                reranked_chunks = await rerank_chunks(ctx, user_query, all_chunks, max_to_rerank=15)
+                if reranked_chunks:  # Verificar que el resultado no sea vacío
+                    all_chunks = reranked_chunks
+                    logger.info("Reranking completado, chunks reordenados por relevancia")
+                else:
+                    logger.warning("El reranking no produjo resultados, manteniendo orden original")
 
                 # Limitar el número de chunks a los N más relevantes
-                max_chunks_to_keep = 8  # Puedes ajustar este número según tus necesidades
+                max_chunks_to_keep = 8
                 if len(all_chunks) > max_chunks_to_keep:
                     logger.info(f"Limitando de {len(all_chunks)} a {max_chunks_to_keep} chunks después del reranking")
                     all_chunks = all_chunks[:max_chunks_to_keep]
         except Exception as e:
             logger.warning(f"No se pudo aplicar reranking con LLM: {e}")
+            # Agregar más detalles sobre el error para facilitar el debugging
+            logger.warning(f"Tipo de error: {type(e).__name__}")
+            logger.warning(f"Detalles completos del error: {str(e)}")
             # Si el reranking falla, continuamos con el orden original de chunks
         
         combined_text = "\n\n---\n\n".join(all_chunks)
@@ -334,6 +336,120 @@ async def retrieve_relevant_documentation(ctx: RunContext[AIDeps], user_query: s
     except Exception as e:
         logger.error(f"Error retrieving documentation: {e}")
         return f"Error retrieving documentation: {str(e)}"
+
+@ai_expert.tool
+async def list_used_documentation(ctx: RunContext[AIDeps], chunks_content: str = None) -> str:
+    """
+    Identifica y lista los documentos utilizados en la generación de una respuesta,
+    analizando directamente los chunks de documentación proporcionados, teniendo en cuenta
+    que estos chunks han pasado por un proceso de reranking.
+    
+    Args:
+        chunks_content: El contenido de los chunks finales devueltos por retrieve_relevant_documentation,
+                        después del proceso de reranking. Si no se proporciona, se solicitará al usuario
+                        que ejecute primero retrieve_relevant_documentation y proporcione su salida.
+    
+    Returns:
+        str: Lista formateada de documentos utilizados con sus títulos y URLs, ordenados según su
+             relevancia determinada por el proceso de reranking.
+    """
+    logger.info("HERRAMIENTA INVOCADA: list_used_documentation")
+    
+    if not chunks_content:
+        return """
+Para listar los documentos utilizados, es necesario proporcionar el contenido de los chunks que fueron utilizados.
+
+Por favor, ejecuta esta herramienta después de retrieve_relevant_documentation y proporciona el resultado 
+como parámetro chunks_content. Este resultado ya incluye los chunks reordenados por el proceso de reranking.
+
+Ejemplo de uso:
+1. Ejecuta retrieve_relevant_documentation(query)
+2. Usa el resultado para ejecutar list_used_documentation(chunks_content=resultado_anterior)
+"""
+    
+    try:
+        logger.info(f"Analizando contenido de chunks post-reranking (longitud: {len(chunks_content)} caracteres)")
+        
+        # Dividir el contenido en chunks individuales (separados por "---")
+        individual_chunks = re.split(r'\n\n---\n\n', chunks_content)
+        logger.info(f"Identificados {len(individual_chunks)} chunks individuales post-reranking")
+        
+        # Extraer títulos y mantener el orden de relevancia determinado por el reranking
+        document_info = []
+        for i, chunk in enumerate(individual_chunks):
+            # Buscar el título que comienza con #
+            title_match = re.search(r'#\s+([^\n]+?)(?:\s*\([^)]*\))?(?:\n|\r|$)', chunk)
+            if title_match:
+                title = title_match.group(1).strip()
+                # Almacenar título y posición (relevancia) según el reranking
+                document_info.append({
+                    "title": title,
+                    "rank": i + 1  # Posición 1-based para mejor presentación
+                })
+                logger.debug(f"Chunk #{i+1}: {title}")
+        
+        if not document_info:
+            logger.info("No se encontraron títulos de documentos en los chunks")
+            return "No se pudieron identificar documentos en el contenido proporcionado."
+        
+        # Eliminar duplicados preservando el orden y la posición de primera aparición
+        unique_docs = {}
+        for doc in document_info:
+            if doc["title"] not in unique_docs:
+                unique_docs[doc["title"]] = doc["rank"]
+        
+        logger.info(f"Encontrados {len(unique_docs)} títulos únicos de documentos")
+        
+        # Consultar la base de datos para obtener información completa
+        used_docs_info = []
+        
+        for title, rank in unique_docs.items():
+            # Consultar información adicional (como URLs) de la base de datos
+            safe_title = title.replace("'", "''")
+            
+            # Primero intentamos una búsqueda exacta
+            result = ctx.deps.supabase.table("visa_mastercard_v7").select("id, title, url").eq("title", title).limit(1).execute()
+            
+            # Si no hay resultados exactos, intentamos una búsqueda por similitud
+            if not result.data:
+                result = ctx.deps.supabase.table("visa_mastercard_v7").select("id, title, url").ilike("title", f"%{safe_title}%").limit(1).execute()
+            
+            if result.data:
+                doc = result.data[0]
+                used_docs_info.append({
+                    "title": title,  # Usamos el título original extraído
+                    "url": doc.get("url", ""),
+                    "rank": rank
+                })
+                logger.debug(f"Encontrada URL para: {title}")
+            else:
+                # Si no encontramos el documento en la base de datos, incluimos solo el título
+                used_docs_info.append({
+                    "title": title, 
+                    "url": "",
+                    "rank": rank
+                })
+                logger.debug(f"No se encontró URL para: {title}")
+        
+        # Ordenar por relevancia (rank) - el orden que tenían después del reranking
+        used_docs_info.sort(key=lambda x: x["rank"])
+        
+        # Formatear la respuesta
+        formatted_response = "## Documentos utilizados en esta respuesta (ordenados por relevancia):\n\n"
+        
+        for i, doc in enumerate(used_docs_info, 1):
+            doc_entry = f"{i}. **{doc['title']}**"
+            if doc["url"]:
+                doc_entry += f"\n   URL: {doc['url']}"
+            formatted_response += doc_entry + "\n\n"
+        
+        logger.info(f"Listados {len(used_docs_info)} documentos utilizados, ordenados según relevancia del reranking")
+        return formatted_response
+        
+    except Exception as e:
+        logger.error(f"Error al analizar documentos utilizados: {str(e)}")
+        return f"Error al recuperar la lista de documentos utilizados: {str(e)}"
+
 
 #@ai_expert.tool
 #async def cross_reference_information(ctx: RunContext[AIDeps], primary_topic: str, related_topics: List[str] = None) -> str:

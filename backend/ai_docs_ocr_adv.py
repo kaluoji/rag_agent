@@ -325,13 +325,21 @@ async def get_title_and_summary(chunk: str, identifier: str) -> Dict[str, str]:
         "You are an AI that extracts titles and summaries from documentation chunks in the same language as the chunk.\n"
         "Return a JSON object with 'title' and 'summary' keys.\n"
         "For the title: If this seems like the start of a document, extract its title. If it's a middle chunk, derive a descriptive title.\n"
-        "For the summary: Create a concise summary of the main points in this chunk.\n"
-        "Keep both title and summary concise but informative."
+        "For the summary: Give a short succinct context to situate this chunk within the overall document for the purposes of improving search retrieval of the chunk. Answer only with the succinct context and nothing else.\n"
+        "Keep both title and summary concise but informative.\n\n"
+        "<document>\n"
+        "{{WHOLE_DOCUMENT}}\n"
+        "</document>\n"
+        "Here is the chunk we want to situate within the whole document\n"
+        "<chunk>\n"
+        "{{CHUNK_CONTENT}}\n"
+        "</chunk>\n"
+        "Please give a short succinct context to situate this chunk within the overall document for the purposes of improving search retrieval of the chunk. Answer only with the succinct context and nothing else."
     )
     try:
         async def call_api():
             return await openai_client.chat.completions.create(
-                model=os.getenv("LLM_MODEL", "gpt-4o-mini"),
+                model=os.getenv("LLM_MODEL", "gpt-3.5-turbo"),
                 messages=[
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": f"Identifier: {identifier}\n\nContent:\n{chunk[:1000]}..."}
@@ -484,7 +492,7 @@ async def get_category(chunk: str) -> str:
     try:
         async def call_api():
             return await openai_client.chat.completions.create(
-                model=os.getenv("LLM_MODEL", "gpt-4o-mini"),
+                model=os.getenv("LLM_MODEL", "gpt-3.5-turbo"),
                 messages=[
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": f"Content:\n{chunk[:1000]}..."}
@@ -511,7 +519,7 @@ async def extract_keywords(chunk: str) -> str:
     try:
         async def call_api():
             return await openai_client.chat.completions.create(
-                model=os.getenv("LLM_MODEL", "gpt-4o"),
+                model=os.getenv("LLM_MODEL", "gpt-3.5-turbo"),
                 messages=[
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": f"Content:\n{chunk[:1000]}..."}
@@ -593,7 +601,7 @@ async def process_chunk(chunk_with_metadata: Dict, chunk_number: int, identifier
 
 async def insert_chunk(chunk: ProcessedChunk):
     """
-    Inserta el fragmento procesado en la tabla 'visa_mastercard_v6' de Supabase.
+    Inserta el fragmento procesado en la tabla 'visa_mastercard_v7' de Supabase.
     Si falla, guarda los datos localmente para procesamiento posterior.
     """
     try:
@@ -606,7 +614,7 @@ async def insert_chunk(chunk: ProcessedChunk):
             "metadata": chunk.metadata,
             "embedding": chunk.embedding
         }
-        result = supabase.table("visa_mastercard_v6").insert(data).execute()
+        result = supabase.table("visa_mastercard_v7").insert(data).execute()
         logging.info(f"Inserted chunk {chunk.chunk_number} for {chunk.url}")
         return result
     except Exception as e:
