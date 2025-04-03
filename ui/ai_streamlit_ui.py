@@ -29,7 +29,6 @@ from pydantic_ai.messages import (
 
 # Importar el orquestador en lugar del agente de compliance directamente
 from agents.orchestrator_agent import process_query, OrchestratorDeps, AgentType
-from agents.risk_assessment_agent import RiskAssessment
 
 # Configuración de la página
 st.set_page_config(
@@ -106,6 +105,26 @@ st.markdown("""
         box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         font-style: italic;
         color: #555;
+    }
+    
+    .new-chat-button {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        color: #8B0D18;
+        background-color: transparent;
+        border: none;
+        padding: 20px;
+        margin-top: 2px;
+        cursor: pointer;
+        font-size: 16px;
+        transition: all 0.2s ease;
+        width: 100%;
+    }
+    
+    .new-chat-button:hover {
+        background-color: rgba(139, 13, 24, 0.1);
+        border-radius: 5px;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -203,74 +222,6 @@ def process_citations(content):
     
     return content
 
-def display_risk_assessment(risk_data: RiskAssessment):
-    """Muestra una evaluación de riesgos formateada en la interfaz."""
-    with st.chat_message("assistant", avatar=f"data:image/png;base64,{get_base64_of_bin_file('assets/logo.png')}"):
-        st.markdown(f"# Evaluación de Riesgos: {risk_data.sector}")
-        
-        # Mostrar marco regulatorio si existe
-        if risk_data.regulatory_framework:
-            st.markdown("## Marco Regulatorio")
-            for reg in risk_data.regulatory_framework:
-                st.markdown(f"- {reg}")
-            
-        st.markdown(f"## Nivel de Riesgo General: {risk_data.overall_risk_level}")
-        
-        # Mostrar áreas impactadas
-        st.markdown("## Áreas Impactadas")
-        for area in risk_data.impacted_areas:
-            st.markdown("---")  # Separador visual
-            
-            # Encabezado del área
-            st.markdown(f"### {area.name}")
-            st.markdown(f"**Nivel de Impacto:** {area.impact_level}")
-            st.markdown(f"**Probabilidad:** {area.probability}")
-            st.markdown(area.description)
-            
-            # Vulnerabilidades
-            if area.key_vulnerabilities:
-                st.markdown("#### Vulnerabilidades Principales")
-                for vuln in area.key_vulnerabilities:
-                    st.markdown(f"""
-* **{vuln.title}**
-  - *Descripción:* {vuln.description}
-  - *Análisis de Impacto:* {vuln.impact_analysis}
-  - *Factores de Riesgo:* {vuln.risk_factors}
-""")
-            
-            # Acciones de mitigación
-            if area.mitigation_actions:
-                st.markdown("#### Acciones de Mitigación")
-                for action in area.mitigation_actions:
-                    st.markdown(f"""
-* **{action.title}**
-  - *Descripción:* {action.description}
-  - *Detalles de Implementación:* {action.implementation_details}
-  - *Beneficios Esperados:* {action.expected_benefits}
-""")
-            
-            # Requisitos de monitorización
-            if area.monitoring_requirements:
-                st.markdown("#### Requisitos de Monitorización")
-                for req in area.monitoring_requirements:
-                    st.markdown(f"""
-* **{req.title}**
-  - *Descripción:* {req.description}
-  - *Guía de Implementación:* {req.implementation_guide}
-  - *Criterios de Éxito:* {req.success_criteria}
-""")
-        
-        # Mostrar recomendaciones clave
-        if risk_data.key_recommendations:
-            st.markdown("## Recomendaciones Clave")
-            for i, rec in enumerate(risk_data.key_recommendations, 1):
-                st.markdown(f"""
-#### {i}. {rec.title}
-- **Descripción:** {rec.description}
-- **Justificación:** {rec.rationale}
-- **Resultado esperado:** {rec.expected_outcome}
-""")
-
 def clear_old_messages():
     """Mantiene sólo los últimos mensajes para evitar acumulaciones excesivas."""
     max_messages = 20
@@ -329,20 +280,39 @@ async def process_user_query(user_input: str):
     with st.spinner("Procesando tu consulta..."):
         result = await process_query(final_query, deps)
         
-        if result.agent_used == AgentType.RISK_ASSESSMENT:
-            display_risk_assessment(result.response)
-            response_text = f"Evaluación de Riesgos para el sector: {result.response.sector}"
-        else:
-            st.markdown(result.response)
-            response_text = result.response
-        
-        # Guardar la conversación en el historial
+        # Crear mensaje de usuario para mostrar
         user_message = ModelRequest(parts=[UserPromptPart(content=user_input)])
-        assistant_message = ModelResponse(parts=[TextPart(content=response_text)])
         
-        st.session_state.messages.extend([user_message, assistant_message])
-        if st.session_state.current_chat_id:
-            st.session_state.chat_history[st.session_state.current_chat_id] = st.session_state.messages.copy()
+        # Extraer y formatear el contenido de la respuesta
+        try:
+            # Verificar cómo viene la respuesta
+            if isinstance(result.response, str):
+                response_text = result.response
+            elif hasattr(result.response, 'data'):
+                response_text = result.response.data
+            else:
+                response_text = str(result.response)
+                
+            # Crear mensaje de respuesta del asistente
+            assistant_message = ModelResponse(parts=[TextPart(content=response_text)])
+            
+            # Añadir a la lista de mensajes
+            st.session_state.messages.extend([user_message, assistant_message])
+            
+            # Guardar en el historial
+            if st.session_state.current_chat_id:
+                st.session_state.chat_history[st.session_state.current_chat_id] = st.session_state.messages.copy()
+            
+            # Mostrar la respuesta
+            with st.chat_message("assistant", avatar=f"data:image/png;base64,{get_base64_of_bin_file('assets/logo.png')}"):
+                content = process_citations(response_text)
+                st.markdown(content, unsafe_allow_html=True)
+                
+        except Exception as e:
+            # Manejar errores en la visualización de la respuesta
+            st.error(f"Error al mostrar la respuesta: {str(e)}")
+            # Intentar mostrar la respuesta en bruto
+            st.write("Respuesta en bruto del agente:", result.response)
 
 
 def set_custom_style():

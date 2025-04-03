@@ -12,9 +12,10 @@ from openai import AsyncOpenAI
 from supabase import Client
 
 from config.config import settings
-from agents.ai_expert_v1 import ai_expert, AIDeps, debug_run_agent  # Importamos la función debug_run_agent
-from agents.risk_assessment_agent import risk_assessment_agent, RiskAssessmentDeps
-from agents.normative_report_agent import normative_report_agent, ReportDeps as NormativeReportDeps, process_report_query
+from agents.ai_expert_v1 import ai_expert, AIDeps, debug_run_agent
+from agents.understanding_query import process_query as process_query_understanding, QueryUnderstandingDeps, QueryInfo
+#from agents.risk_assessment_agent import risk_assessment_agent, RiskAssessmentDeps
+#from agents.normative_report_agent import normative_report_agent, ReportDeps as NormativeReportDeps, process_report_query
 
 # Configuración básica de logging
 logging.basicConfig(level=logging.INFO)
@@ -30,9 +31,10 @@ model = OpenAIModel(
 class AgentType(str, Enum):
     """Tipos de agentes disponibles en el sistema."""
     COMPLIANCE = "compliance"
-    RISK_ASSESSMENT = "risk_assessment"
-    REPORT = "report"
-    NORMATIVE_REPORT = "normative_report"
+    QUERY_UNDERSTANDING = "query_understanding"
+    #RISK_ASSESSMENT = "risk_assessment"
+    #REPORT = "report"
+    #NORMATIVE_REPORT = "normative_report"
     
 
 class OrchestratorDeps(BaseModel):
@@ -49,140 +51,158 @@ class AgentInfo(BaseModel):
     confidence: float = Field(..., ge=0.0, le=1.0)
     query_parameters: Dict[str, Any] = {}
 
+class OrchestratorPlan(BaseModel):
+    """Plan de ejecución generado por el orquestador."""
+    steps: List[Dict[str, Any]] = Field(default_factory=list)
+    requires_query_understanding: bool = False
+    requires_complex_handling: bool = False
+    primary_agent: AgentType
+    additional_info: Dict[str, Any] = Field(default_factory=dict)
+
 class OrchestrationResult(BaseModel):
     """Resultado de la orquestación."""
     agent_used: AgentType
     response: Any
+    query_info: Optional[QueryInfo] = None
     additional_info: Optional[Dict[str, Any]] = None
 
 system_prompt = """
 Eres un agente orquestador encargado de coordinar múltiples agentes especializados en medios de pago y en las reglas de Visa y Mastercard. Tu objetivo principal es:
 
-Analizar la consulta del usuario para identificar su intención principal.
-Determinar cuál de los agentes disponibles es el más adecuado para atenderla.
-Proporcionar tu nivel de confianza (entre 0.0 y 1.0) en dicha selección.
-Identificar parámetros o información adicional para el agente elegido (si aplica).
-Agente disponible:
+1. Determinar qué agentes deben involucrarse en la respuesta a una consulta
+2. Planificar el flujo de trabajo necesario para responder a la consulta
+3. Especificar los parámetros o información adicional para cada agente
 
-Agente de Compliance (COMPLIANCE)
-Experto en normativas de cumplimiento (compliance), especializado en reglas de Visa y Mastercard.
-Ideal para:
-Consultas sobre reglas de Visa/Mastercard.
-Explicaciones de obligaciones regulatorias.
-Dudas específicas sobre cumplimiento normativo.
-Generación de informes relacionados con normas y regulaciones.
-Traductor de idioma en caso de que la consulta esté en un idioma diferente al español.
+Agentes disponibles:
 
-Agente de Evaluación de Riesgos (RISK_ASSESSMENT) – Especialista en analizar riesgos por sector. Ideal para:
-Identificación de áreas de riesgo en una empresa
-Evaluación de impacto y probabilidad de riesgos regulatorios
-Análisis de riesgos específicos del sector
-Recomendaciones para mitigar riesgos de compliance
-Realización de GAP analysis con respecto a la información de la BBDD
+1. QUERY_UNDERSTANDING
+   - Especializado en analizar y procesar consultas de usuario
+   - Expande consultas con términos implícitos
+   - Descompone consultas complejas en sub-consultas
+   - Identifica entidades e intenciones en la consulta
+   - Detecta idioma y evalúa complejidad
 
-Agente de Informes Normativos (NORMATIVE_REPORT) 
-Especialista en crear documentos Word con informes formales basados en normativas. Ideal para:
-- Generación de informes normativos en formato Word
-- Creación de documentos basados en plantillas predefinidas
-- Elaboración de documentos que sinteticen información normativa
-- Creación de entregables formales para clientes o reguladores
-- Solicitudes que mencionen explícitamente informes, documentos Word o reportes formales
+2. COMPLIANCE
+   - Experto en normativas de cumplimiento, especializado en reglas de Visa y Mastercard
+   - Ideal para consultas sobre regulaciones, obligaciones y procesos normativos
+   - Puede generar informes relacionados con normas de cumplimiento
 
-Instrucciones Clave:
-- Enfócate en la intención principal de la consulta.
-- Si la consulta toca varias áreas, prioriza la necesidad más relevante o el objetivo final del usuario.
-- Si la consulta requiere un GAP analysis respecto a la normativa de BBDD, selecciona siempre al Agente COMPLIANCE.
-- Para consultas generales sobre reglas de Visa o Mastercard, prioriza igualmente al Agente COMPLIANCE.
-- Para consultas que soliciten explícitamente evaluación de riesgos por sector o análisis de áreas impactadas, prioriza el agente RISK_ASSESSMENT.
-- Para solicitudes que mencionen la necesidad de un documento Word, informe formal, reporte en formato editable o que hagan referencia a plantillas, selecciona el agente NORMATIVE_REPORT.
+Para cada consulta, debes determinar:
+1. Si se requiere un análisis previo con QUERY_UNDERSTANDING
+2. Si la consulta parece compleja y podría beneficiarse de la descomposición
+3. Qué agente principal debe responder la consulta (generalmente COMPLIANCE)
+
+Tu respuesta debe ser un plan de orquestación que especifique la secuencia de agentes a utilizar y cualquier información relevante para su ejecución.
 
 Importante:
 No respondas directamente la consulta del usuario.
-Tu única función es redirigir la consulta al agente especializado adecuado.
+Tu única función es planificar la coordinación entre los agentes especializados.
 """
-
 
 orchestrator_agent = Agent(
     model=model,
     system_prompt=system_prompt,
     deps_type=OrchestratorDeps,
-    result_type=AgentInfo
+    result_type=OrchestratorPlan
 )
 
-async def route_to_agent(agent_info: AgentInfo, deps: OrchestratorDeps, query: str) -> OrchestrationResult:
+async def execute_orchestration_plan(plan: OrchestratorPlan, query: str, deps: OrchestratorDeps) -> OrchestrationResult:
     """
-    Enruta la consulta al agente adecuado según el análisis del orquestador.
-    """
-    logger.info(f"Enrutando consulta al agente: {agent_info.agent_type} (confianza: {agent_info.confidence})")
+    Ejecuta un plan de orquestación generado por el orquestador.
     
-    # Crear las dependencias para el agente de compliance
+    Args:
+        plan: Plan de orquestación a ejecutar
+        query: Consulta original del usuario
+        deps: Dependencias necesarias para los agentes
+    
+    Returns:
+        OrchestrationResult: Resultado de la ejecución del plan
+    """
+    logger.info(f"Ejecutando plan de orquestación - Agente principal: {plan.primary_agent}")
+    query_info = None
+    effective_query = query
+    
+    # Preparar dependencias para los diferentes agentes
     ai_deps = AIDeps(
         supabase=deps.supabase,
         openai_client=deps.openai_client
     )
     
-    if agent_info.agent_type == AgentType.COMPLIANCE:
-        # Redirigir al agente de compliance usando debug_run_agent
-        response = await debug_run_agent(query, deps=ai_deps)
+    query_understanding_deps = QueryUnderstandingDeps(
+        supabase=deps.supabase,
+        openai_client=deps.openai_client
+    )
+    
+    # Paso 1: Procesar con Query Understanding si el plan lo requiere
+    if plan.requires_query_understanding:
+        logger.info("Ejecutando paso de comprensión de consulta (Query Understanding)")
+        query_info = await process_query_understanding(query, deps=query_understanding_deps)
+        
+        # Si tenemos una consulta expandida, la usamos
+        if query_info.expanded_query:
+            effective_query = query_info.expanded_query
+            logger.info(f"Usando consulta expandida: {effective_query[:100]}..." if len(effective_query) > 100 else effective_query)
+    
+    # Paso 2: Si la consulta es compleja y tenemos información de Query Understanding, 
+    # procesamos cada sub-consulta
+    if plan.requires_complex_handling and query_info and query_info.decomposed_queries:
+        logger.info(f"Procesando consulta compleja con {len(query_info.decomposed_queries)} sub-consultas")
+        
+        # Procesar cada sub-consulta
+        sub_responses = []
+        for i, sub_query in enumerate(query_info.decomposed_queries):
+            logger.info(f"Procesando sub-consulta {i+1}: {sub_query[:100]}..." if len(sub_query) > 100 else sub_query)
+            
+            if plan.primary_agent == AgentType.COMPLIANCE:
+                sub_response = await debug_run_agent(sub_query, deps=ai_deps)
+                sub_responses.append(sub_response.data)
+        
+        # Sintetizar los resultados de las sub-consultas
+        synthesis_prompt = f"Sintetiza de manera coherente las siguientes respuestas a sub-consultas sobre: {query}\n\n"
+        for i, sub_response in enumerate(sub_responses):
+            synthesis_prompt += f"Respuesta {i+1} (a la sub-consulta: {query_info.decomposed_queries[i]}):\n{sub_response}\n\n"
+        
+        # Usar el modelo para sintetizar una respuesta coherente
+        completion = await deps.openai_client.chat.completions.create(
+            model=llm,
+            temperature=0.2,
+            messages=[
+                {"role": "system", "content": "Eres un experto en normativas de VISA y Mastercard encargado de sintetizar múltiples respuestas en una única respuesta coherente y completa. Conserva toda la información relevante, elimina redundancias y organiza el contenido de manera lógica."},
+                {"role": "user", "content": synthesis_prompt}
+            ]
+        )
+        
+        synthesized_response = completion.choices[0].message.content
+        
+        # Devolver la respuesta sintetizada
+        return OrchestrationResult(
+            agent_used=plan.primary_agent,
+            response=synthesized_response,
+            query_info=query_info,
+            additional_info={"processed_sub_queries": len(sub_responses)}
+        )
+    
+    # Paso 3: Procesamiento estándar con el agente principal
+    logger.info(f"Procesando con el agente principal: {plan.primary_agent}")
+    
+    if plan.primary_agent == AgentType.COMPLIANCE:
+        response = await debug_run_agent(effective_query, deps=ai_deps)
         
         return OrchestrationResult(
-            agent_used=AgentType.COMPLIANCE,
+            agent_used=plan.primary_agent,
             response=response.data,
+            query_info=query_info,
             additional_info={"usage": response.usage()}
         )
-    
-    elif agent_info.agent_type == AgentType.RISK_ASSESSMENT:
-        # Redirigir al agente de evaluación de riesgos
-        risk_deps = RiskAssessmentDeps(
-            supabase=deps.supabase,
-            openai_client=deps.openai_client
-        )
-        response = await risk_assessment_agent.run(
-            query,
-            deps=risk_deps
-        )
-        return OrchestrationResult(
-            agent_used=AgentType.RISK_ASSESSMENT,
-            response=response.data,
-            additional_info={"usage": response.usage()}
-        )
-    
-    elif agent_info.agent_type == AgentType.NORMATIVE_REPORT:
-        # Redirigir al agente de informes normativos
-        normative_report_deps = NormativeReportDeps(
-            supabase=deps.supabase,
-            openai_client=deps.openai_client
-        )
-        
-        # Extraer parámetros específicos si existen
-        template_name = agent_info.query_parameters.get("template_name", None)
-        
-        # Añadir información sobre la plantilla a la consulta si está disponible
-        enhanced_query = query
-        if template_name:
-            enhanced_query = f"{query}\n\nUsa la plantilla: {template_name}"
-        
-        # Procesar la consulta con el agente de informes normativos
-        response = await process_report_query(enhanced_query, deps=normative_report_deps)
-        
-        return OrchestrationResult(
-            agent_used=AgentType.NORMATIVE_REPORT,
-            response=response,
-            additional_info={
-                "template_used": template_name,
-                "document_format": response.format,
-                "filename": response.filename
-            }
-        )
-    
     else:
         # Si no se reconoce el tipo de agente, usamos el agente de compliance por defecto
-        logger.warning(f"Tipo de agente desconocido: {agent_info.agent_type}. Usando agente de compliance por defecto.")
-        response = await debug_run_agent(query, deps=ai_deps)
+        logger.warning(f"Tipo de agente principal no implementado: {plan.primary_agent}. Usando agente de compliance por defecto.")
+        response = await debug_run_agent(effective_query, deps=ai_deps)
         
         return OrchestrationResult(
             agent_used=AgentType.COMPLIANCE,
             response=response.data,
+            query_info=query_info,
             additional_info={"usage": response.usage()}
         )
 
@@ -202,20 +222,24 @@ async def process_query(query: str, deps: OrchestratorDeps) -> OrchestrationResu
     logger.info(f"ORQUESTADOR: Consulta recibida: {query[:100]}..." if len(query) > 100 else query)
     logger.info("=" * 50)
     
-    # El orquestador analiza la consulta y determina qué agente debe manejarla
-    logger.info("ORQUESTADOR: Analizando consulta con el agente orquestador...")
+    # El orquestador analiza la consulta y genera un plan de ejecución
+    logger.info("ORQUESTADOR: Generando plan de ejecución...")
     orchestration_result = await orchestrator_agent.run(
         query,
         deps=deps
     )
     
-    agent_info = orchestration_result.data
-    logger.info(f"ORQUESTADOR: Decisión del orquestador - Agente seleccionado: {agent_info.agent_type} con confianza: {agent_info.confidence}")
+    plan = orchestration_result.data
+    logger.info(f"ORQUESTADOR: Plan generado - Agente principal: {plan.primary_agent}")
+    logger.info(f"ORQUESTADOR: ¿Requiere Query Understanding? {plan.requires_query_understanding}")
+    logger.info(f"ORQUESTADOR: ¿Requiere manejo de consulta compleja? {plan.requires_complex_handling}")
     
-    # Log de parámetros adicionales identificados por el orquestador
-    if agent_info.query_parameters:
-        logger.info(f"ORQUESTADOR: Parámetros detectados: {agent_info.query_parameters}")
+    if plan.steps:
+        for i, step in enumerate(plan.steps):
+            logger.info(f"ORQUESTADOR: Paso {i+1}: {step}")
     
-    # Redirigimos la consulta al agente especializado
-    logger.info(f"ORQUESTADOR: Redirigiendo consulta al agente {agent_info.agent_type}...")
-    return await route_to_agent(agent_info, deps, query)
+    # Ejecutar el plan de orquestación
+    logger.info("ORQUESTADOR: Ejecutando plan de orquestación...")
+    result = await execute_orchestration_plan(plan, query, deps)
+    
+    return result

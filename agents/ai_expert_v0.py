@@ -16,7 +16,7 @@ from pydantic_ai.models.openai import OpenAIModel
 from pydantic import BaseModel
 from openai import AsyncOpenAI
 from supabase import Client
-from typing import List, Any, Optional
+from typing import List, Any
 import logging
 from datetime import datetime, timedelta
 from urllib.parse import urlparse
@@ -27,7 +27,6 @@ from contextlib import asynccontextmanager
 from utils.reranking_v1 import rerank_chunks
 from config.config import settings
 from utils.utils import count_tokens, truncate_text
-from agents.understanding_query import QueryInfo
 from rank_bm25 import BM25Okapi
 import nltk
 from nltk.tokenize import word_tokenize
@@ -125,48 +124,22 @@ async def get_embedding(text: str, openai_client: AsyncOpenAI) -> List[float]:
         return [0] * 1536  # Return zero vector on error
 
 @ai_expert.tool
-async def retrieve_relevant_documentation(ctx: RunContext[AIDeps], user_query: str, query_info: Optional[QueryInfo] = None) -> str:
+async def retrieve_relevant_documentation(ctx: RunContext[AIDeps], user_query: str) -> str:
     """
     Retrieve relevant documentation chunks based on the query with RAG.
-    Aprovecha la información de Query Understanding si está disponible.
-    
-    Args:
-        user_query: Consulta original del usuario
-        query_info: Información de análisis de la consulta (opcional)
+    Paraleliza la recuperación de chunks de las diferentes fuentes con mediciones de tiempo.
     """
     start_time_total = time.time()
     logger.info("HERRAMIENTA INVOCADA: retrieve_relevant_documentation")
     logger.info(f"Usando modelo: {llm}")
     try:
-        # Determinar qué consulta usar para la búsqueda
-        search_query = user_query
-        
-        # Si tenemos información de Query Understanding, usamos la consulta optimizada
-        if query_info:
-            logger.info("Utilizando información de Query Understanding para mejorar la búsqueda")
-            
-            # Usar la consulta optimizada para búsqueda si está disponible
-            if query_info.search_query:
-                search_query = query_info.search_query
-                logger.info(f"Usando consulta optimizada para búsqueda: {search_query[:100]}..." if len(search_query) > 100 else search_query)
-            # Si no hay consulta optimizada pero sí expandida, usamos esa
-            elif query_info.expanded_query:
-                search_query = query_info.expanded_query
-                logger.info(f"Usando consulta expandida: {search_query[:100]}..." if len(search_query) > 100 else search_query)
-            
-            # Log de información adicional disponible
-            logger.info(f"Información adicional de la consulta:")
-            logger.info(f"  Intención principal: {query_info.main_intent}")
-            logger.info(f"  Complejidad: {query_info.complexity}")
-            logger.info(f"  Entidades detectadas: {[f'{e.type}:{e.value}' for e in query_info.entities]}")
-            logger.info(f"  Palabras clave: {[k.word for k in query_info.keywords]}")
-        
-        logger.info(f"Generando embedding para la consulta de búsqueda...")
+        logger.info(f"Generando embedding para la consulta: {user_query[:50]}...")
+        logger.info(f"Consulta recibida en la herramienta: {user_query[:100]}..." if len(user_query) > 100 else user_query)
         logger.info("=" * 80)
         
         # Primero obtenemos el embedding de la consulta (esto es un prerequisito para las búsquedas)
         start_time_embedding = time.time()
-        query_embedding = await get_embedding(search_query, ctx.deps.openai_client)
+        query_embedding = await get_embedding(user_query, ctx.deps.openai_client)
         embedding_time = time.time() - start_time_embedding
         logger.info(f"Tiempo para generar embedding: {embedding_time:.2f}s")
         
@@ -220,10 +193,71 @@ async def retrieve_relevant_documentation(ctx: RunContext[AIDeps], user_query: s
                 logger.error(f"Error en búsqueda vectorial: {e}")
                 return [], set(), set()
         
+        async def get_cluster_chunks(cluster_ids, matched_ids):
+            """Recupera chunks adicionales por cluster."""
+            start_time = time.time()
+            all_cluster_chunks = []
+            new_matched_ids = matched_ids.copy()
+            
+            # Para cada cluster, lanzamos una búsqueda en paralelo
+            async def get_chunks_for_cluster(cluster_id):
+                cluster_start_time = time.time()
+                logger.info(f"Buscando chunks adicionales para el cluster_id={cluster_id}")
+                try:
+                    cluster_result = ctx.deps.supabase.rpc(
+                        'match_visa_mastercard_v7_by_cluster',
+                        {
+                            'cluster_id': cluster_id,
+                            'match_count': 9
+                        }
+                    ).execute()
+                    
+                    cluster_chunks = []
+                    local_matched_ids = set()
+                    
+                    if cluster_result.data:
+                        for doc in cluster_result.data:
+                            doc_id = doc.get('id')
+                            # Solo añadir si no está ya incluido en los IDs originales
+                            if doc_id not in matched_ids:
+                                local_matched_ids.add(doc_id)
+                                cluster_chunks.append((doc_id, f"""
+# {doc['title']} (Del mismo tema que otros resultados)
+
+{doc['content']}
+"""))
+                    
+                    cluster_elapsed_time = time.time() - cluster_start_time
+                    logger.info(f"Tiempo para cluster {cluster_id}: {cluster_elapsed_time:.2f}s - Encontrados: {len(cluster_chunks)} chunks")
+                    return cluster_chunks, local_matched_ids
+                except Exception as e:
+                    logger.error(f"Error recuperando chunks para cluster {cluster_id}: {e}")
+                    return [], set()
+            
+            # Ejecutar búsquedas de clusters en paralelo - AJUSTE IMPORTANTE
+            if cluster_ids:
+                # Crear las tareas para cada cluster
+                cluster_search_tasks = [get_chunks_for_cluster(cid) for cid in cluster_ids]
+                
+                # Ejecutar todas las tareas en paralelo y esperar los resultados
+                cluster_results = await asyncio.gather(*cluster_search_tasks)
+                
+                # Procesar resultados de forma segura
+                for chunks_and_ids in cluster_results:
+                    chunks, local_ids = chunks_and_ids
+                    for doc_id, chunk_text in chunks:
+                        if doc_id not in new_matched_ids:  # Verificación adicional para evitar duplicados
+                            new_matched_ids.add(doc_id)
+                            all_cluster_chunks.append(chunk_text)
+                
+                logger.info(f"Recuperados {len(all_cluster_chunks)} chunks adicionales de {len(cluster_ids)} clusters")
+            
+            elapsed_time = time.time() - start_time
+            logger.info(f"Tiempo total de búsqueda por clusters: {elapsed_time:.2f}s")
+            return all_cluster_chunks, new_matched_ids
+        
         async def get_bm25_chunks(matched_ids):
-            """
-            Recupera chunks usando BM25, utilizando información de Query Understanding si está disponible.
-            """
+            """Recupera chunks usando BM25."""
             start_time = time.time()
             logger.info(f"Ejecutando búsqueda léxica BM25 (complementaria)")
             bm25_chunks = []
@@ -252,18 +286,7 @@ async def retrieve_relevant_documentation(ctx: RunContext[AIDeps], user_query: s
                         id_map.append(doc.get('id'))
                         full_docs.append(doc)
                     
-                    # Usar palabras clave de Query Understanding si están disponibles
-                    if query_info and query_info.keywords:
-                        # Usar solo las palabras clave con importancia alta
-                        important_keywords = [k.word for k in query_info.keywords if k.importance > 0.7]
-                        if important_keywords:
-                            logger.info(f"Usando palabras clave de alta importancia para BM25: {important_keywords}")
-                            query_tokens = word_tokenize(" ".join(important_keywords).lower())
-                        else:
-                            query_tokens = word_tokenize(search_query.lower())
-                    else:
-                        query_tokens = word_tokenize(search_query.lower())
-                    
+                    query_tokens = word_tokenize(user_query.lower())
                     bm25 = BM25Okapi(corpus)
                     scores = bm25.get_scores(query_tokens)
                     
@@ -295,133 +318,52 @@ async def retrieve_relevant_documentation(ctx: RunContext[AIDeps], user_query: s
             
             return bm25_chunks
         
-        # Si tenemos entidades de Query Understanding, podemos hacer una búsqueda adicional por entidades
-        async def get_entity_based_chunks(matched_ids):
-            """
-            Recupera chunks basados en las entidades detectadas por Query Understanding.
-            Solo se ejecuta si hay información de Query Understanding disponible.
-            """
-            if not query_info or not query_info.entities:
-                return []
-            
-            start_time = time.time()
-            logger.info(f"Ejecutando búsqueda basada en entidades")
-            entity_chunks = []
-            new_matched_ids = matched_ids.copy()
-            
-            try:
-                # Extraer entidades relevantes (priorizar regulation, program, process)
-                priority_types = ['regulation', 'program', 'process', 'technical_requirement']
-                relevant_entities = [e for e in query_info.entities if e.type in priority_types]
-                
-                if not relevant_entities:
-                    logger.info("No hay entidades de alta prioridad para búsqueda")
-                    return []
-                
-                # Construir condiciones para la consulta SQL
-                entity_conditions = []
-                for entity in relevant_entities:
-                    # Escapar valor para SQL y convertir a minúsculas para comparación insensible a mayúsculas
-                    value = entity.value.lower().replace("'", "''")
-                    entity_conditions.append(f"(LOWER(content) LIKE '%{value}%' OR LOWER(title) LIKE '%{value}%')")
-                
-                if not entity_conditions:
-                    return []
-                
-                # Combinar condiciones con OR
-                where_clause = " OR ".join(entity_conditions)
-                
-                # Ejecutar consulta en Supabase
-                entity_query = ctx.deps.supabase.table("visa_mastercard_v7").select("id, title, summary, content").filter(where_clause, False).execute()
-                
-                if entity_query.data:
-                    for doc in entity_query.data:
-                        doc_id = doc.get('id')
-                        if doc_id not in new_matched_ids:
-                            new_matched_ids.add(doc_id)
-                            
-                            summary = doc.get('summary', '')
-                            summary_section = f"\nResumen: {summary}\n" if summary else ""
-                            
-                            entity_text = f"""
-# {doc.get('title', '')} (Coincidencia por entidad específica)
-{summary_section}
-{doc.get('content', '')}
-"""
-                            entity_chunks.append(entity_text)
-                
-                elapsed_time = time.time() - start_time
-                logger.info(f"Recuperados {len(entity_chunks)} chunks adicionales por entidades en {elapsed_time:.2f}s")
-                return entity_chunks
-                
-            except Exception as e:
-                logger.error(f"Error en la búsqueda por entidades: {e}")
-                return []
-        
         # Ejecutar búsqueda vectorial primero (necesitamos los cluster_ids)
         start_search_time = time.time()
         vector_chunks, matched_ids, cluster_ids = await get_vector_chunks()
         vector_time = time.time() - start_search_time
         
-        # Luego ejecutamos en paralelo las búsquedas complementarias
+        # Luego ejecutamos en paralelo la búsqueda por clusters y BM25
         start_parallel_time = time.time()
         
-        # Tareas asíncronas para las búsquedas complementarias
-        tasks = [
-            get_cluster_chunks(cluster_ids, matched_ids),
-            get_bm25_chunks(matched_ids)
-        ]
+        # Medición de tiempo precisa para cada tarea
+        cluster_start = time.time()
+        cluster_search_task = get_cluster_chunks(cluster_ids, matched_ids)
         
-        # Si tenemos información de Query Understanding, agregamos la búsqueda por entidades
-        if query_info and query_info.entities:
-            tasks.append(get_entity_based_chunks(matched_ids))
+        bm25_start = time.time()
+        bm25_search_task = get_bm25_chunks(matched_ids)
         
-        # Ejecutar todas las búsquedas en paralelo
-        parallel_results = await asyncio.gather(*tasks)
+        # Esperamos a que ambas búsquedas terminen
+        parallel_results = await asyncio.gather(
+            cluster_search_task,
+            bm25_search_task
+        )
         
         # Extraer resultados
-        cluster_chunks_result = parallel_results[0]
-        bm25_chunks = parallel_results[1]
+        cluster_chunks_result, bm25_chunks = parallel_results
         cluster_chunks, updated_matched_ids = cluster_chunks_result
-        
-        # Extraer chunks basados en entidades si existen
-        entity_chunks = []
-        if query_info and query_info.entities and len(parallel_results) > 2:
-            entity_chunks = parallel_results[2]
         
         parallel_time = time.time() - start_parallel_time
         logger.info(f"Tiempo de búsquedas paralelas: {parallel_time:.2f}s")
         
         # Combinar todos los chunks
-        all_chunks = vector_chunks + cluster_chunks + bm25_chunks + entity_chunks
+        all_chunks = vector_chunks + cluster_chunks + bm25_chunks
         
         # Verificar si tenemos algún resultado
         if not all_chunks:
             logger.info("No relevant documentation found through any method.")
             return "No relevant documentation found."
         
-        logger.info(f"RESUMEN: {len(vector_chunks)} chunks por similitud vectorial + {len(cluster_chunks)} chunks por cluster + {len(bm25_chunks)} chunks por BM25 + {len(entity_chunks)} chunks por entidades = {len(all_chunks)} chunks en total")
+        logger.info(f"RESUMEN: {len(vector_chunks)} chunks por similitud vectorial + {len(cluster_chunks)} chunks por cluster + {len(bm25_chunks)} chunks por BM25 = {len(all_chunks)} chunks en total")
         
         # Tiempo para reranking
         start_rerank_time = time.time()
         try:
-            # Aplicamos reranking con información de Query Understanding si está disponible
+            # Aplicamos reranking solo si hay suficientes chunks para que sea útil
             if len(all_chunks) > 3:
                 logger.info("Aplicando reranking con LLM...")
                 logger.info(f"Usando modelo: {llm}")
-                
-                # Construir prompt de reranking enriquecido con información de Query Understanding
-                reranking_query = search_query
-                if query_info:
-                    # Construir contexto enriquecido para el reranking
-                    intent_context = f"Intención principal: {query_info.main_intent}" if query_info.main_intent else ""
-                    entity_context = f"Entidades importantes: {', '.join([e.value for e in query_info.entities[:5]])}" if query_info.entities else ""
-                    keyword_context = f"Palabras clave: {', '.join([k.word for k in query_info.keywords[:5]])}" if query_info.keywords else ""
-                    
-                    reranking_query = f"{search_query}\n\nContexto adicional:\n{intent_context}\n{entity_context}\n{keyword_context}"
-                
-                # Usar el reranking mejorado con el contexto enriquecido
-                reranked_chunks = await rerank_chunks(ctx, reranking_query, all_chunks, max_to_rerank=15)
+                reranked_chunks = await rerank_chunks(ctx, user_query, all_chunks, max_to_rerank=15)
                 if reranked_chunks:  # Verificar que el resultado no sea vacío
                     all_chunks = reranked_chunks
                     logger.info("Reranking completado, chunks reordenados por relevancia")
@@ -430,9 +372,6 @@ async def retrieve_relevant_documentation(ctx: RunContext[AIDeps], user_query: s
 
                 # Limitar el número de chunks a los N más relevantes
                 max_chunks_to_keep = 8
-                if query_info and query_info.complexity == "complex":
-                    max_chunks_to_keep = 12  # Para consultas complejas, permitimos más contexto
-                
                 if len(all_chunks) > max_chunks_to_keep:
                     logger.info(f"Limitando de {len(all_chunks)} a {max_chunks_to_keep} chunks después del reranking")
                     all_chunks = all_chunks[:max_chunks_to_keep]
@@ -482,25 +421,11 @@ async def retrieve_relevant_documentation(ctx: RunContext[AIDeps], user_query: s
         logger.info("==== RESUMEN DE TIEMPOS ====")
         logger.info(f"Generación de embedding: {embedding_time:.2f}s")
         logger.info(f"Búsqueda vectorial: {vector_time:.2f}s")
-        logger.info(f"Búsquedas paralelas: {parallel_time:.2f}s")
+        logger.info(f"Búsquedas paralelas (cluster + BM25): {parallel_time:.2f}s")
         logger.info(f"Reranking: {rerank_time:.2f}s")
         logger.info(f"Combinación y truncamiento: {final_time:.2f}s")
         logger.info(f"TIEMPO TOTAL: {total_time:.2f}s")
         logger.info("==========================")
-        
-        # Si tenemos información de Query Understanding, agregamos metadatos al resultado
-        if query_info:
-            # Agregar un separador con información sobre la consulta
-            metadata_header = f"""
-=== INFORMACIÓN DE ANÁLISIS DE CONSULTA ===
-Intención principal: {query_info.main_intent}
-Complejidad: {query_info.complexity}
-Entidades detectadas: {[f'{e.type}:{e.value}' for e in query_info.entities]}
-Consulta utilizada para búsqueda: {search_query[:100]}..." if len(search_query) > 100 else search_query
-===========================================
-
-"""
-            combined_text = metadata_header + combined_text
         
         return combined_text
     
