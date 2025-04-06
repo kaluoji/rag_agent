@@ -186,7 +186,7 @@ async def execute_orchestration_plan(plan: OrchestratorPlan, query: str, deps: O
     logger.info(f"Procesando con el agente principal: {plan.primary_agent}")
     
     if plan.primary_agent == AgentType.COMPLIANCE:
-        response = await debug_run_agent(effective_query, deps=ai_deps)
+        response = await debug_run_agent(effective_query, deps=ai_deps, query_info=query_info)
         
         return OrchestrationResult(
             agent_used=plan.primary_agent,

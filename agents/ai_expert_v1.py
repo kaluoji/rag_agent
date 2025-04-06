@@ -16,7 +16,7 @@ from pydantic_ai.models.openai import OpenAIModel
 from pydantic import BaseModel
 from openai import AsyncOpenAI
 from supabase import Client
-from typing import List, Any, Optional
+from typing import List, Any, Optional, Set
 import logging
 from datetime import datetime, timedelta
 from urllib.parse import urlparse
@@ -38,8 +38,10 @@ nltk.download('punkt_tab')
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+_current_query_info = None
+
 MAX_TOTAL_TOKENS = 100000
-MAX_CHUNKS_RETURNED = 22
+MAX_CHUNKS_RETURNED = 20
 
 load_dotenv()
 
@@ -65,11 +67,11 @@ Eres un experto en normativas de VISA y Mastercard, operando como un agente de i
 Tu misión es responder a todas las consultas proporcionando información precisa, detallada y bien estructurada, enfocada exclusivamente en el ecosistema de pagos y el cumplimiento normativo. Al responder, debes incluir todos los detalles y el contexto relevantes, utilizando listas numeradas o viñetas para desglosar procesos complejos.
 
 INSTRUCCIONES CLAVE:
-• Antes de responder cualquier consulta, DEBES utilizar la herramienta retrieve_relevant_documentation para extraer y resumir los fragmentos de documentación más relevantes de VISA y Mastercard.
-• La información recuperada debe mostrarse siempre en el formato exacto del "chunk" extraído de la base de datos vectorial.
-• Sé sincero e indica si la documentación disponible no abarca todos los aspectos necesarios.
-• No solicites información adicional ni te disculpes por la falta de detalles; infiere y proporciona la respuesta más completa y precisa.
-• NUNCA debes responder a una consulta sin haber ejecutado primero la herramienta retrieve_relevant_documentation, excepto cuando se solicite específicamente una lista de documentación, en cuyo caso utilizarás list_documentation_pages.
+- Antes de responder cualquier consulta, DEBES utilizar la herramienta retrieve_relevant_documentation para extraer y resumir los fragmentos de documentación más relevantes de VISA y Mastercard.
+- La información recuperada debe mostrarse siempre en el formato exacto del "chunk" extraído de la base de datos vectorial.
+- Sé sincero e indica si la documentación disponible no abarca todos los aspectos necesarios.
+- No solicites información adicional ni te disculpes por la falta de detalles; infiere y proporciona la respuesta más completa y precisa.
+- NUNCA debes responder a una consulta sin haber ejecutado primero la herramienta retrieve_relevant_documentation, excepto cuando se solicite específicamente una lista de documentación, en cuyo caso utilizarás list_documentation_pages.
 
 """
 
@@ -83,26 +85,41 @@ ai_expert = Agent(
 
 # -------------------- Herramientas del agente --------------------
 
-async def debug_run_agent(user_query: str, deps: AIDeps):
+async def debug_run_agent(user_query: str, deps: AIDeps, query_info: Optional[QueryInfo] = None):
     """
     Ejecuta el agente de compliance con logging adicional.
     
     Args:
         user_query: La consulta del usuario
         deps: Las dependencias necesarias para el agente
+        query_info: Información de análisis de la consulta (opcional)
     """
     logger.debug("Voy a llamar al agente con la query: %s", user_query)
     
-    response = await ai_expert.run(
-        user_query,
-        deps=deps
-    )
+    # Creamos una variable global temporal para almacenar query_info
+    global _current_query_info
+    _current_query_info = query_info
     
-    # RunResult tiene un método usage() en lugar de get()
-    usage_info = response.usage()
-    logger.info("Uso de tokens en la consulta: %s", usage_info)
-    
-    return response
+    try:
+        # Asegurarnos de NO pasar query_info o context como parámetro
+        response = await ai_expert.run(
+            user_query,
+            deps=deps
+        )
+        
+        # Limpiamos la variable global
+        _current_query_info = None
+        
+        # RunResult tiene un método usage() en lugar de get()
+        usage_info = response.usage()
+        logger.info("Uso de tokens en la consulta: %s", usage_info)
+        
+        return response
+    except Exception as e:
+        # Limpiamos la variable global incluso en caso de error
+        _current_query_info = None
+        # Re-lanzar la excepción para que pueda ser manejada adecuadamente
+        raise e
 
 def count_tokens_wrapper(text: str) -> int:
     return count_tokens(text, settings.tokenizer_model)
@@ -124,6 +141,80 @@ async def get_embedding(text: str, openai_client: AsyncOpenAI) -> List[float]:
         logger.error(f"Error getting embedding: {e}")
         return [0] * 1536  # Return zero vector on error
 
+# Implementación de la función get_cluster_chunks que falta
+async def get_cluster_chunks(ctx, cluster_ids, matched_ids):
+    """
+    Recupera chunks adicionales por cluster.
+    
+    Args:
+        ctx: El contexto del agente con las dependencias
+        cluster_ids: Conjunto de IDs de clusters a buscar
+        matched_ids: Conjunto de IDs de documentos ya recuperados para evitar duplicados
+    
+    Returns:
+        Tuple[List[str], Set[int]]: Lista de chunks de texto y conjunto actualizado de IDs coincidentes
+    """
+    start_time = time.time()
+    all_cluster_chunks = []
+    new_matched_ids = matched_ids.copy()
+    
+    # Para cada cluster, lanzamos una búsqueda en paralelo
+    async def get_chunks_for_cluster(cluster_id):
+        cluster_start_time = time.time()
+        logger.info(f"Buscando chunks adicionales para el cluster_id={cluster_id}")
+        try:
+            cluster_result = ctx.deps.supabase.rpc(
+                'match_visa_mastercard_v7_by_cluster',
+                {
+                    'cluster_id': cluster_id,
+                    'match_count': 5
+                }
+            ).execute()
+            
+            cluster_chunks = []
+            local_matched_ids = set()
+            
+            if cluster_result.data:
+                for doc in cluster_result.data:
+                    doc_id = doc.get('id')
+                    # Solo añadir si no está ya incluido en los IDs originales
+                    if doc_id not in matched_ids:
+                        local_matched_ids.add(doc_id)
+                        cluster_chunks.append((doc_id, f"""
+# {doc['title']} (Del mismo tema que otros resultados)
+
+{doc['content']}
+"""))
+            
+            cluster_elapsed_time = time.time() - cluster_start_time
+            logger.info(f"Tiempo para cluster {cluster_id}: {cluster_elapsed_time:.2f}s - Encontrados: {len(cluster_chunks)} chunks")
+            return cluster_chunks, local_matched_ids
+        except Exception as e:
+            logger.error(f"Error recuperando chunks para cluster {cluster_id}: {e}")
+            return [], set()
+    
+    # Ejecutar búsquedas de clusters en paralelo
+    if cluster_ids:
+        # Crear las tareas para cada cluster
+        cluster_search_tasks = [get_chunks_for_cluster(cid) for cid in cluster_ids]
+        
+        # Ejecutar todas las tareas en paralelo y esperar los resultados
+        cluster_results = await asyncio.gather(*cluster_search_tasks)
+        
+        # Procesar resultados de forma segura
+        for chunks_and_ids in cluster_results:
+            chunks, local_ids = chunks_and_ids
+            for doc_id, chunk_text in chunks:
+                if doc_id not in new_matched_ids:  # Verificación adicional para evitar duplicados
+                    new_matched_ids.add(doc_id)
+                    all_cluster_chunks.append(chunk_text)
+        
+        logger.info(f"Recuperados {len(all_cluster_chunks)} chunks adicionales de {len(cluster_ids)} clusters")
+    
+    elapsed_time = time.time() - start_time
+    logger.info(f"Tiempo total de búsqueda por clusters: {elapsed_time:.2f}s")
+    return all_cluster_chunks, new_matched_ids
+
 @ai_expert.tool
 async def retrieve_relevant_documentation(ctx: RunContext[AIDeps], user_query: str, query_info: Optional[QueryInfo] = None) -> str:
     """
@@ -137,6 +228,13 @@ async def retrieve_relevant_documentation(ctx: RunContext[AIDeps], user_query: s
     start_time_total = time.time()
     logger.info("HERRAMIENTA INVOCADA: retrieve_relevant_documentation")
     logger.info(f"Usando modelo: {llm}")
+
+    # Si no se pasó query_info como parámetro, intentamos obtenerlo de la variable global
+    global _current_query_info
+    if query_info is None and _current_query_info is not None:
+        query_info = _current_query_info
+        logger.info("Utilizando información de Query Understanding obtenida de la variable global")
+
     try:
         # Determinar qué consulta usar para la búsqueda
         search_query = user_query
@@ -368,7 +466,7 @@ async def retrieve_relevant_documentation(ctx: RunContext[AIDeps], user_query: s
         
         # Tareas asíncronas para las búsquedas complementarias
         tasks = [
-            get_cluster_chunks(cluster_ids, matched_ids),
+            get_cluster_chunks(ctx, cluster_ids, matched_ids),  # Pasamos el contexto ctx como primer argumento
             get_bm25_chunks(matched_ids)
         ]
         

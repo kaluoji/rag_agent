@@ -766,7 +766,7 @@ Genera una consulta optimizada para búsqueda que mantenga la intención origina
         # Si hay error, devolvemos la consulta expandida o la original
         return expanded_query or original_query
 
-@query_understanding_agent.function
+@query_understanding_agent.tool
 async def analyze_query(ctx: RunContext[QueryUnderstandingDeps], query: str) -> QueryInfo:
     """
     Realiza un análisis completo de la consulta del usuario.
@@ -848,9 +848,149 @@ async def analyze_query(ctx: RunContext[QueryUnderstandingDeps], query: str) -> 
         # Asegurar que devolvemos una estructura mínima válida
         return query_info
 
+
+async def evaluate_query_complexity(query: str, openai_client) -> bool:
+    """
+    Evalúa rápidamente si una consulta es compleja y necesita procesamiento avanzado.
+    
+    Args:
+        query: Consulta a evaluar
+        openai_client: Cliente de OpenAI
+        
+    Returns:
+        bool: True si la consulta es compleja, False en caso contrario
+    """
+    logger.info("Evaluando complejidad básica de la consulta")
+    
+    try:
+        # Método simple: evaluación basada en longitud y características básicas
+        words = query.split() 
+        if len(words) > 15 or query.count('?') > 1:
+            logger.info("La consulta se considera compleja por criterios básicos")
+            return True
+            
+        # Evaluación rápida con el modelo
+        completion = await openai_client.chat.completions.create(
+            model=llm,
+            temperature=0.0,
+            response_format={"type": "json_object"},
+            messages=[
+                {"role": "system", "content": """Evalúa si la siguiente consulta sobre normativas VISA/Mastercard es simple o compleja.
+                Una consulta compleja contiene múltiples preguntas, abarca varios temas, o requiere información de diversas fuentes.
+                Responde con un JSON simple: {"is_complex": true/false}"""},
+                {"role": "user", "content": query}
+            ]
+        )
+        
+        result = json.loads(completion.choices[0].message.content)
+        is_complex = result.get("is_complex", False)
+        
+        logger.info(f"Evaluación rápida de complejidad: {'compleja' if is_complex else 'simple'}")
+        return is_complex
+        
+    except Exception as e:
+        logger.error(f"Error evaluando complejidad básica: {str(e)}")
+        # Por defecto, asumimos que no es compleja en caso de error
+        return False
+
+async def extract_entities_fast(openai_client, text: str) -> List[Entity]:
+    """
+    Versión rápida y simplificada de extracción de entidades.
+    """
+    try:
+        completion = await openai_client.chat.completions.create(
+            model=llm,
+            temperature=0.1,
+            response_format={"type": "json_object"},
+            messages=[
+                {"role": "system", "content": "Extrae las principales entidades (regulation, process, card_type, fee, region) de la consulta. Responde con formato JSON: {\"entities\": [{\"type\": \"...\", \"value\": \"...\"}]}"},
+                {"role": "user", "content": text}
+            ]
+        )
+        
+        result_json = json.loads(completion.choices[0].message.content)
+        entities_data = result_json.get("entities", [])
+        
+        return [Entity(**entity_data) for entity_data in entities_data]
+        
+    except Exception as e:
+        logger.error(f"Error en extracción rápida de entidades: {e}")
+        return []
+
+async def extract_keywords_fast(openai_client, text: str) -> List[Keyword]:
+    """
+    Versión rápida y simplificada de extracción de palabras clave.
+    """
+    try:
+        completion = await openai_client.chat.completions.create(
+            model=llm,
+            temperature=0.1,
+            response_format={"type": "json_object"},
+            messages=[
+                {"role": "system", "content": "Extrae las 3-5 palabras clave más importantes de la consulta. Responde con formato JSON: {\"keywords\": [{\"word\": \"...\", \"importance\": 0.9}]}"},
+                {"role": "user", "content": text}
+            ]
+        )
+        
+        result_json = json.loads(completion.choices[0].message.content)
+        keywords_data = result_json.get("keywords", [])
+        
+        return [Keyword(**keyword_data) for keyword_data in keywords_data]
+        
+    except Exception as e:
+        logger.error(f"Error en extracción rápida de palabras clave: {e}")
+        return []
+
+async def analyze_intent_fast(openai_client, text: str) -> List[Intent]:
+    """
+    Versión rápida y simplificada de análisis de intención.
+    """
+    try:
+        completion = await openai_client.chat.completions.create(
+            model=llm,
+            temperature=0.1,
+            response_format={"type": "json_object"},
+            messages=[
+                {"role": "system", "content": "Identifica la intención principal de la consulta sobre normativas VISA/Mastercard. Responde con formato JSON: {\"intents\": [{\"name\": \"...\", \"confidence\": 0.9}]}"},
+                {"role": "user", "content": text}
+            ]
+        )
+        
+        result_json = json.loads(completion.choices[0].message.content)
+        intents_data = result_json.get("intents", [])
+        
+        return [Intent(**intent_data) for intent_data in intents_data]
+        
+    except Exception as e:
+        logger.error(f"Error en análisis rápido de intención: {e}")
+        return [Intent(name="consulta_general", confidence=0.5)]
+
+async def generate_search_query_fast(openai_client, query: str, keywords: List[Keyword], entities: List[Entity]) -> str:
+    """
+    Versión rápida para generar una consulta de búsqueda.
+    """
+    try:
+        keywords_str = ", ".join([k.word for k in keywords])
+        entities_str = ", ".join([f"{e.type}:{e.value}" for e in entities])
+        
+        completion = await openai_client.chat.completions.create(
+            model=llm,
+            temperature=0.1,
+            messages=[
+                {"role": "system", "content": "Reformula esta consulta para optimizarla para búsqueda vectorial y léxica, priorizando términos técnicos y específicos."},
+                {"role": "user", "content": f"Consulta: {query}\nPalabras clave: {keywords_str}\nEntidades: {entities_str}"}
+            ]
+        )
+        
+        return completion.choices[0].message.content
+        
+    except Exception as e:
+        logger.error(f"Error generando consulta de búsqueda rápida: {e}")
+        return query
+
 async def process_query(query: str, deps: QueryUnderstandingDeps) -> QueryInfo:
     """
-    Procesa una consulta y aplica las técnicas de comprensión avanzada.
+    Procesa una consulta y aplica las técnicas de comprensión avanzada de manera adaptativa.
     
     Args:
         query: La consulta del usuario
@@ -862,41 +1002,169 @@ async def process_query(query: str, deps: QueryUnderstandingDeps) -> QueryInfo:
     start_time = time.time()
     logger.info(f"Procesando consulta con el agente de comprensión: {query[:100]}..." if len(query) > 100 else query)
     
+    # Inicializar estructura de resultado
+    query_info = QueryInfo(original_query=query)
+    
     try:
-        # Ejecutar el análisis completo de la consulta
-        result = await query_understanding_agent.analyze_query(
-            query,
-            deps=deps
-        )
+        # En lugar de crear un RunContext, utilizaremos directamente el agente
+        # con la función run que ejecutará todas las herramientas necesarias
         
-        # Loguear información relevante
-        logger.info(f"Consulta expandida: {result.expanded_query[:100]}..." if len(result.expanded_query) > 100 else result.expanded_query)
-        logger.info(f"Intención principal: {result.main_intent} (confianza: {result.confidence})")
-        logger.info(f"Idioma detectado: {result.language}")
-        logger.info(f"Complejidad: {result.complexity}")
+        # 1. Detectar idioma (simple, sin usar RunContext)
+        logger.info("Detectando idioma del texto")
+        try:
+            # Enfoque directo sin RunContext
+            completion = await deps.openai_client.chat.completions.create(
+                model=llm,
+                temperature=0.1,
+                response_format={"type": "json_object"},
+                messages=[
+                    {"role": "system", "content": """Eres un experto en detección de idiomas. 
+                    
+    Tu tarea es identificar el idioma en que está escrito el texto proporcionado.
+    
+    Devuelve un JSON con formato:
+    {
+      "language_code": "código_iso_639_1",
+      "language_name": "nombre del idioma en español",
+      "confidence": 0.95,
+      "needs_translation": true/false,
+      "detected_script": "latino/cirílico/etc"
+    }
+    
+    El valor de 'needs_translation' debe ser true si el idioma NO es español, y false si es español.
+    """},
+                    {"role": "user", "content": query}
+                ]
+            )
+            
+            language_info = json.loads(completion.choices[0].message.content)
+            query_info.language = language_info.get("language_code", "es")
+            logger.info(f"Idioma detectado: {language_info.get('language_name', 'desconocido')} ({language_info.get('language_code', '??')})")
+        except Exception as e:
+            logger.error(f"Error en la detección de idioma: {str(e)}")
+            query_info.language = "es"  # Default a español en caso de error
         
-        if result.decomposed_queries:
-            logger.info(f"Consulta descompuesta en {len(result.decomposed_queries)} sub-consultas")
-            for i, subquery in enumerate(result.decomposed_queries):
-                logger.info(f"  Sub-consulta {i+1}: {subquery.text[:100]}..." if len(subquery.text) > 100 else subquery.text)
+        # 2. Evaluación de complejidad simple
+        # Corregir el orden de los argumentos
+        is_complex = await evaluate_query_complexity(query, deps.openai_client)
+        processing_level = "full" if is_complex else "basic"
         
-        if result.entities:
-            logger.info(f"Entidades detectadas: {[f'{e.type}:{e.value}' for e in result.entities]}")
+        logger.info(f"Nivel de procesamiento seleccionado: {processing_level}")
         
-        if result.keywords:
-            logger.info(f"Palabras clave: {[k.word for k in result.keywords]}")
-        
-        # Información sobre la calidad de búsqueda esperada
-        logger.info(f"Calidad de búsqueda estimada: {result.estimated_search_quality}")
-        
+        # 3. Procesamiento adaptativo basado en complejidad
+        if processing_level == "basic":
+            # Para consultas simples, hacemos solo procesamiento directo sin usar herramientas del agente
+            
+            # 3.1 Extracción de entidades
+            try:
+                completion = await deps.openai_client.chat.completions.create(
+                    model=llm,
+                    temperature=0.1,
+                    response_format={"type": "json_object"},
+                    messages=[
+                        {"role": "system", "content": """Extrae las principales entidades (regulation, process, card_type, fee, region) de la consulta. Responde con formato JSON: {\"entities\": [{\"type\": \"...\", \"value\": \"...\"}]}"""},
+                        {"role": "user", "content": query}
+                    ]
+                )
+                
+                result_json = json.loads(completion.choices[0].message.content)
+                entities_data = result_json.get("entities", [])
+                entities = [Entity(**entity_data) for entity_data in entities_data]
+                query_info.entities = entities
+            except Exception as e:
+                logger.error(f"Error en extracción de entidades: {e}")
+                query_info.entities = []
+            
+            # 3.2 Extracción de palabras clave
+            try:
+                completion = await deps.openai_client.chat.completions.create(
+                    model=llm,
+                    temperature=0.1,
+                    response_format={"type": "json_object"},
+                    messages=[
+                        {"role": "system", "content": """Extrae las 3-5 palabras clave más importantes de la consulta. Responde con formato JSON: {\"keywords\": [{\"word\": \"...\", \"importance\": 0.9}]}"""},
+                        {"role": "user", "content": query}
+                    ]
+                )
+                
+                result_json = json.loads(completion.choices[0].message.content)
+                keywords_data = result_json.get("keywords", [])
+                keywords = [Keyword(**keyword_data) for keyword_data in keywords_data]
+                query_info.keywords = keywords
+            except Exception as e:
+                logger.error(f"Error en extracción de palabras clave: {e}")
+                query_info.keywords = []
+            
+            # 3.3 Análisis de intención
+            try:
+                completion = await deps.openai_client.chat.completions.create(
+                    model=llm,
+                    temperature=0.1,
+                    response_format={"type": "json_object"},
+                    messages=[
+                        {"role": "system", "content": """Identifica la intención principal de la consulta sobre normativas VISA/Mastercard. Responde con formato JSON: {\"intents\": [{\"name\": \"...\", \"confidence\": 0.9}]}"""},
+                        {"role": "user", "content": query}
+                    ]
+                )
+                
+                result_json = json.loads(completion.choices[0].message.content)
+                intents_data = result_json.get("intents", [])
+                intents = [Intent(**intent_data) for intent_data in intents_data]
+                query_info.intents = intents
+            except Exception as e:
+                logger.error(f"Error en análisis de intención: {e}")
+                query_info.intents = [Intent(name="consulta_general", confidence=0.5)]
+            
+            # 3.4 Generación de consulta de búsqueda
+            query_info.complexity = "simple"
+            query_info.search_query = query  # Usar la consulta original como predeterminada
+            
+            try:
+                keywords_str = ", ".join([k.word for k in query_info.keywords])
+                entities_str = ", ".join([f"{e.type}:{e.value}" for e in query_info.entities])
+                
+                completion = await deps.openai_client.chat.completions.create(
+                    model=llm,
+                    temperature=0.1,
+                    messages=[
+                        {"role": "system", "content": "Reformula esta consulta para optimizarla para búsqueda vectorial y léxica, priorizando términos técnicos y específicos."},
+                        {"role": "user", "content": f"Consulta: {query}\nPalabras clave: {keywords_str}\nEntidades: {entities_str}"}
+                    ]
+                )
+                
+                query_info.search_query = completion.choices[0].message.content
+            except Exception as e:
+                logger.error(f"Error generando consulta de búsqueda: {e}")
+                # Mantener la consulta original si hay error
+            
+        else:
+            # Para consultas complejas, utilizaremos el método execute del agente
+            # que no depende de RunContext
+            logger.info("Utilizando el agente completo para procesar la consulta")
+            try:
+                # En lugar de usar execute directamente, vamos a llamar a cada herramienta individualmente
+                result = await query_understanding_agent.run(
+                    f"Analiza esta consulta completamente: {query}",
+                    deps=deps
+                )
+                # Procesar resultado si es necesario
+                # Si el agente devuelve un QueryInfo completo, podemos utilizarlo directamente
+                if isinstance(result, QueryInfo):
+                    query_info = result
+                else:
+                    # En caso contrario, mantener la información básica ya recopilada
+                    logger.info("El agente no devolvió un QueryInfo completo, usando información parcial")
+            except Exception as e:
+                logger.error(f"Error ejecutando el agente de comprensión: {e}")
+                # Mantener la información básica ya recopilada
+    
     except Exception as e:
         elapsed_time = time.time() - start_time
         logger.error(f"Error en el procesamiento de la consulta después de {elapsed_time:.2f}s: {e}")
-        # Devolver una estructura mínima con la consulta original
-        result = QueryInfo(original_query=query)
-        result.metadata["error"] = str(e)
+        # Asegurar que devolvemos un resultado básico pero funcional
+        query_info.metadata["error"] = str(e)
     
     elapsed_time = time.time() - start_time
     logger.info(f"Tiempo total de procesamiento de la consulta: {elapsed_time:.2f}s")
     
-    return result
+    return query_info
