@@ -1,0 +1,73 @@
+:root {
+    font-family: 'Roboto', 'Helvetica', 'Arial', sans-serif;
+    line-height: 1.5;
+    font-weight: 400;
+  }
+  
+  body {
+    margin: 0;
+    min-width: 320px;
+    min-height: 100vh;
+  }
+  
+  a {
+    text-decoration: none;
+  }
+  
+  /* Estilos para la vista previa del documento */
+  .document-preview {
+    font-family: 'Times New Roman', Times, serif;
+    line-height: 1.6;
+    color: #333;
+  }
+  
+  .document-preview h1 {
+    font-size: 1.5rem;
+    margin-top: 1.5rem;
+    margin-bottom: 1rem;
+  }
+  
+  .document-preview h2 {
+    font-size: 1.3rem;
+    margin-top: 1.3rem;
+    margin-bottom: 0.8rem;
+  }
+  
+  .document-preview h3 {
+    font-size: 1.1rem;
+    margin-top: 1.1rem;
+    margin-bottom: 0.6rem;
+  }
+  
+  .document-preview p {
+    margin-bottom: 1rem;
+  }
+  
+  .document-preview ul,
+  .document-preview ol {
+    margin-bottom: 1rem;
+    padding-left: 1.5rem;
+  }
+  
+  .document-preview table {
+    border-collapse: collapse;
+    width: 100%;
+    margin-bottom: 1rem;
+  }
+  
+  .document-preview table, .document-preview th, .document-preview td {
+    border: 1px solid #ddd;
+  }
+  
+  .document-preview th, .document-preview td {
+    padding: 8px;
+    text-align: left;
+  }
+  
+  .document-preview th {
+    background-color: #f2f2f2;
+  }
+  
+  .document-preview tr:nth-child(even) {
+    background-color: #f9f9f9;
+  }
