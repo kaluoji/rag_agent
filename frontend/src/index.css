@@ -1,73 +1,376 @@
-:root {
-    font-family: 'Roboto', 'Helvetica', 'Arial', sans-serif;
-    line-height: 1.5;
-    font-weight: 400;
+/* Estilos para la interfaz de chat */
+
+/* Estilos para destacados (texto amarillo) */
+.markdown-content mark,
+.highlighted-text {
+  background-color: #ffeb3b;
+  padding: 2px 4px;
+  font-size: 1.4em;
+  font-weight: 500;
+  border-radius: 3px;
+}
+
+/* Estilos para contenido markdown */
+.markdown-content code {
+  font-family: 'Consolas', 'Monaco', 'Andale Mono', monospace;
+  font-size: 0.9em;
+  padding: 2px 4px;
+  background-color: rgba(0, 0, 0, 0.04);
+  border-radius: 3px;
+}
+
+.markdown-content pre {
+  margin: 1em 0;
+  padding: 12px 16px;
+  overflow: auto;
+  background-color: rgba(0, 0, 0, 0.04);
+  border-radius: 4px;
+}
+
+.markdown-content pre code {
+  padding: 0;
+  background-color: transparent;
+}
+
+.markdown-content h1 {
+  font-size: 1.7em;
+  margin-top: 1.5em;
+  margin-bottom: 0.8em;
+}
+
+.markdown-content h2 {
+  font-size: 1.5em;
+  margin-top: 1.3em;
+  margin-bottom: 0.7em;
+}
+
+.markdown-content h3 {
+  font-size: 1.3em;
+  margin-top: 1.1em;
+  margin-bottom: 0.6em;
+}
+
+.markdown-content h4 {
+  font-size: 1.1em;
+  margin-top: 1em;
+  margin-bottom: 0.5em;
+}
+
+.markdown-content ul, .markdown-content ol {
+  padding-left: 2em;
+  margin-bottom: 1em;
+}
+
+.markdown-content blockquote {
+  margin-left: 0;
+  padding-left: 1em;
+  border-left: 4px solid #e0e0e0;
+  color: #6c757d;
+}
+
+.markdown-content table {
+  border-collapse: collapse;
+  width: 100%;
+  margin-bottom: 1em;
+}
+
+.markdown-content table th,
+.markdown-content table td {
+  border: 1px solid #ddd;
+  padding: 8px;
+}
+
+.markdown-content table th {
+  padding-top: 12px;
+  padding-bottom: 12px;
+  text-align: left;
+  background-color: #f2f2f2;
+}
+
+.markdown-content table tr:nth-child(even) {
+  background-color: #f9f9f9;
+}
+.chat-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.chat-messages {
+  flex-grow: 1;
+  overflow-y: auto;
+  padding: 1rem;
+}
+
+.chat-message {
+  display: flex;
+  margin-bottom: 1rem;
+}
+
+.chat-message-user {
+  flex-direction: row-reverse;
+}
+
+.chat-input {
+  padding: 1rem;
+  border-top: 1px solid #e0e0e0;
+  display: flex;
+  align-items: center;
+}
+
+.chat-bubble {
+  padding: 0.75rem 1rem;
+  border-radius: 18px;
+  max-width: 80%;
+  white-space: pre-line;
+}
+
+.chat-bubble-user {
+  background-color: #e3f2fd;
+  margin-left: auto;
+  border-top-right-radius: 4px;
+}
+
+.chat-bubble-assistant {
+  background-color: #f5f5f5;
+  margin-right: auto;
+  border-top-left-radius: 4px;
+}
+
+/* Estilos para la vista de previsualización del chat */
+.chat-preview-container {
+  font-family: 'Roboto', 'Helvetica', 'Arial', sans-serif;
+  white-space: pre-line;
+  max-width: 100%;
+  overflow-wrap: break-word;
+}
+
+/* Animación de "escribiendo" */
+.typing-indicator {
+  display: flex;
+  align-items: center;
+}
+
+.typing-indicator span {
+  height: 8px;
+  width: 8px;
+  margin: 0 1px;
+  background-color: #9e9e9e;
+  border-radius: 50%;
+  display: inline-block;
+  animation: typing 1.4s infinite ease-in-out both;
+}
+
+.typing-indicator span:nth-child(1) {
+  animation-delay: 0s;
+}
+
+.typing-indicator span:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.typing-indicator span:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes typing {
+  0% {
+    transform: scale(1);
+    opacity: 0.7;
   }
-  
-  body {
-    margin: 0;
-    min-width: 320px;
-    min-height: 100vh;
+  20% {
+    transform: scale(1.2);
+    opacity: 1;
   }
-  
-  a {
-    text-decoration: none;
+  100% {
+    transform: scale(1);
+    opacity: 0.7;
   }
-  
-  /* Estilos para la vista previa del documento */
-  .document-preview {
-    font-family: 'Times New Roman', Times, serif;
-    line-height: 1.6;
-    color: #333;
+}
+
+/* Estilo para scrollbar en WebKit (Chrome, Safari, Opera) */
+::-webkit-scrollbar {
+  width: 6px;               /* ancho del scrollbar vertical */
+  height: 6px;              /* altura del scrollbar horizontal */
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;  /* fondo del track */
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(79, 6, 42, 0.2);  /* color del thumb con transparencia */
+  border-radius: 10px;
+  transition: background 0.3s;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(79, 6, 42, 0.4);  /* color más oscuro al pasar el mouse */
+}
+
+/* Para Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(79, 6, 42, 0.2) transparent;
+}
+
+/* Modificaciones específicas para contenedores que tienen scroll */
+.chat-messages-container {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(79, 6, 42, 0.2) transparent;
+}
+
+/* Estilos para ocultar el scrollbar pero mantener la funcionalidad */
+.hide-scrollbar {
+  -ms-overflow-style: none;  /* IE y Edge */
+  scrollbar-width: none;     /* Firefox */
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;             /* Chrome, Safari, Opera */
+}
+
+/* Estilos para el indicador de escritura mejorado - añadir a index.css */
+
+/* Mejora la animación de "escribiendo" */
+.typing-indicator {
+  display: flex;
+  align-items: center;
+}
+
+.typing-indicator span {
+  height: 8px;
+  width: 8px;
+  margin: 0 1px;
+  background-color: rgba(79, 6, 42, 0.5);
+  border-radius: 50%;
+  display: inline-block;
+  animation: typing 1.4s infinite ease-in-out both;
+}
+
+.typing-indicator span:nth-child(1) {
+  animation-delay: 0s;
+}
+
+.typing-indicator span:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.typing-indicator span:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes typing {
+  0% {
+    transform: scale(1);
+    opacity: 0.7;
   }
-  
-  .document-preview h1 {
-    font-size: 1.5rem;
-    margin-top: 1.5rem;
-    margin-bottom: 1rem;
+  20% {
+    transform: scale(1.2);
+    opacity: 1;
   }
-  
-  .document-preview h2 {
-    font-size: 1.3rem;
-    margin-top: 1.3rem;
-    margin-bottom: 0.8rem;
+  100% {
+    transform: scale(1);
+    opacity: 0.7;
   }
-  
-  .document-preview h3 {
-    font-size: 1.1rem;
-    margin-top: 1.1rem;
-    margin-bottom: 0.6rem;
+}
+
+/* Animación sutil del botón de envío */
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(79, 6, 42, 0.4);
   }
-  
-  .document-preview p {
-    margin-bottom: 1rem;
+  70% {
+    box-shadow: 0 0 0 6px rgba(79, 6, 42, 0);
   }
-  
-  .document-preview ul,
-  .document-preview ol {
-    margin-bottom: 1rem;
-    padding-left: 1.5rem;
+  100% {
+    box-shadow: 0 0 0 0 rgba(79, 6, 42, 0);
   }
-  
-  .document-preview table {
-    border-collapse: collapse;
-    width: 100%;
-    margin-bottom: 1rem;
+}
+
+form:focus-within .send-button:not(:disabled) {
+  animation: pulse 2s infinite;
+}
+
+/* Efecto de hover para mensajes en el chat */
+.chat-message {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.chat-message:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+}
+
+/* Mejora los efectos de transición para el campo de consulta */
+.MuiInputBase-root {
+  transition: all 0.3s ease !important;
+}
+
+.MuiInputBase-root:focus-within {
+  transform: translateY(-1px);
+}
+
+/* Animación para el contenedor de bienvenida */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 20px, 0);
   }
-  
-  .document-preview table, .document-preview th, .document-preview td {
-    border: 1px solid #ddd;
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
   }
-  
-  .document-preview th, .document-preview td {
-    padding: 8px;
-    text-align: left;
-  }
-  
-  .document-preview th {
-    background-color: #f2f2f2;
-  }
-  
-  .document-preview tr:nth-child(even) {
-    background-color: #f9f9f9;
-  }
+}
+
+.welcome-container {
+  animation: fadeInUp 0.8s ease-out forwards;
+}
+
+/* Añadir a index.css */
+
+/* Ocultar scrollbar en la página principal cuando no es necesario */
+html, body {
+  overflow: hidden;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overscroll-behavior: none;
+}
+
+/* Para asegurar que el scroll solo aparezca cuando sea necesario */
+.chat-messages-container {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(79, 6, 42, 0.2) transparent;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  /* Solo muestra scrollbar cuando es necesario */
+  scrollbar-gutter: stable;
+}
+
+/* Hacer que el container principal de la aplicación ocupe todo el espacio disponible sin scroll */
+#root {
+  height: 100vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Asegurar que el contenedor principal no tenga scroll */
+.app-container {
+  height: 100%;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Contenedor principal del chat con altura automática */
+.chat-main-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-height: 0; /* Crucial para que flex funcione correctamente */
+}
