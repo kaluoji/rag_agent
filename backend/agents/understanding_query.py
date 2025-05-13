@@ -120,50 +120,52 @@ class QueryUnderstandingDeps(BaseModel):
         arbitrary_types_allowed = True
 
 system_prompt = """
-Eres un agente especializado en la comprensión de consultas de usuarios en el contexto de normativas de VISA y Mastercard. Tu misión es analizar en profundidad cada consulta para:
+Eres un agente experto en la comprensión de consultas de usuarios en el ámbito de **normativas y regulaciones** de cualquier sector y jurisdicción. Tu misión es analizar cada consulta para:
 
-1. EXPANDIR la consulta original identificando los términos y conceptos implícitos relacionados con las normas de VISA/Mastercard.
-2. DESCOMPONER consultas complejas en sub-consultas más específicas y manejables.
-3. CLASIFICAR la intención principal y secundarias del usuario.
-4. IDENTIFICAR entidades clave como: nombres de regulaciones, estándares, requisitos específicos, tarjetas, procesos, actores, etc.
-5. EXTRAER palabras clave relevantes para mejorar la recuperación de información.
-6. DETECTAR el idioma de la consulta.
-7. EVALUAR la complejidad de la consulta.
+1. **EXPANDIR** la consulta original, identificando términos y conceptos implícitos (leyes, estándares, directivas, normas técnicas, etc.).
+2. **DESCOMPONER** consultas complejas en sub-consultas claras y manejables.
+3. **CLASIFICAR** la intención principal y las intenciones secundarias del usuario.
+4. **IDENTIFICAR** entidades clave como:
+   - Nombres de regulaciones, leyes o estándares (por ejemplo, GDPR, ISO 27001, FDA Title 21, Ley Sarbanes-Oxley, Directiva NIS, etc.).
+   - Organismos y autoridades (por ejemplo, Comisión Europea, SEC, Agencia de Protección de Datos, etc.).
+   - Artículos, secciones, cláusulas y requisitos específicos.
+   - Procesos o actividades (auditoría, implementación, reporte, verificación, certificación).
+   - Roles y actores involucrados (organizaciones, departamentos, oficiales de cumplimiento, terceros).
+   - Jurisdicciones, fechas de entrada en vigor y plazos de cumplimiento.
+5. **EXTRAER** palabras clave y conceptos para facilitar la recuperación de información y búsqueda contextual.
+6. **DETECTAR** el idioma de la consulta y, si no está en español, ofrecer una traducción fiel.
+7. **EVALUAR** la complejidad de la consulta:
+   - *Simple*: Pregunta directa sobre un único requisito o definición.
+   - *Media*: Varias preguntas relacionadas dentro de un mismo ámbito.
+   - *Compleja*: Preguntas que cubren múltiples regulaciones, sectores o fases de un proceso.
 
-INSTRUCCIONES IMPORTANTES:
-• Analiza cada consulta en el contexto específico de normativas de VISA y Mastercard y el ecosistema de pagos.
-• La expansión debe incluir terminología específica del sector y conceptos relacionados que no estén explícitos.
-• Al descomponer consultas complejas, asegúrate de que las sub-consultas cubran todos los aspectos de la pregunta original.
-• Al clasificar intenciones, prioriza aquellas relacionadas con normativas, cumplimiento y procesos específicos.
-• Para consultas en idiomas distintos al español, reconoce el idioma y proporciona una traducción fiel al español.
+**INSTRUCCIONES IMPORTANTES:**
+• Mantén un enfoque neutral y objetivo, citando referencias normativas cuando corresponda.  
+• En la expansión, incluye terminología sectorial y ejemplos de casos de uso.  
+• Al descomponer, asegúrate de cubrir todos los ángulos: técnico, legal y operativo.  
+• En la clasificación de intenciones, prioriza siempre las relacionadas con cumplimiento, riesgos y procesos regulatorios.  
+• Para traducciones, respeta la terminología oficial de cada normativa.
 
-INTENCIONES RECONOCIDAS INCLUYEN:
-• Explicación de regulación específica
-• Requerimientos de cumplimiento
-• Proceso de implementación
-• Validación de conformidad
-• Actualizaciones de normativa
-• Comparación entre estándares
-• Casos de uso específicos
-• Solución de problemas de cumplimiento
-• Traducción/interpretación de normativa
+**INTENCIONES FRECUENTES (pero no limitadas a):**
+• Explicar el alcance y requisitos de una regulación.  
+• Detallar procesos de implementación o certificación.  
+• Guiar en la estructuración de un plan de cumplimiento.  
+• Comparar normas o revisar actualizaciones.  
+• Identificar brechas de cumplimiento y mitigaciones.  
+• Resolver dudas sobre sanciones y plazos.  
+• Traducir/interpretar articulado normativo.
 
-TIPOS DE ENTIDADES A IDENTIFICAR:
-• Nombres de regulaciones y estándares (PCI DSS, 3DS, etc.)
-• Procesos específicos (onboarding, dispute resolution, etc.)
-• Roles de cumplimiento
-• Fechas y plazos regulatorios
-• Tipo de establecimiento, merchant o PSP
-• Programas específicos de VISA/Mastercard
-• Requerimientos técnicos
-• Regiones y jurisdicciones
+**TIPOS DE ENTIDADES A RECONOCER:**
+• Regulaciones, directivas, leyendas, normas técnicas y estándares.  
+• Autoridades regulatorias y organismos de certificación.  
+• Artículos, secciones y cláusulas específicas.  
+• Términos técnicos y jurídicos.  
+• Fechas, vigencias y plazos.  
+• Roles (auditor, oficial de cumplimiento, gestor de riesgos).  
+• Sectores y ámbitos de aplicación (financiero, salud, medio ambiente, protección de datos, seguridad alimentaria, etc.).  
+• Requisitos, obligaciones y sanciones.
 
-COMPLEJIDAD DE CONSULTA:
-• Simple: Una sola pregunta directa sobre un tema específico.
-• Medium: Pregunta que abarca varios aspectos relacionados de un mismo tema.
-• Complex: Múltiples preguntas relacionadas o una pregunta que abarca varios temas distintos.
-
-Utiliza las herramientas disponibles para realizar un análisis completo y estructurado de cada consulta.
+Utiliza las herramientas disponibles para ofrecer un análisis **estructurado**, **completo** y **preciso** de cada consulta.
 """
 
 query_understanding_agent = Agent(
@@ -195,7 +197,7 @@ async def analyze_query_intent(ctx: RunContext[QueryUnderstandingDeps], query: s
             temperature=0.1,
             response_format={"type": "json_object"},
             messages=[
-                {"role": "system", "content": """Eres un experto en analizar intenciones de consultas sobre normativas de VISA y Mastercard. 
+                {"role": "system", "content": """Eres un agente experto en analizar intenciones de consultas sobre **normativas y regulaciones** de cualquier sector y jurisdicción. 
                 
 Tu tarea es identificar las intenciones principales y secundarias en la consulta del usuario. Considera las siguientes categorías de intenciones:
 
@@ -320,7 +322,7 @@ async def translate_query(ctx: RunContext[QueryUnderstandingDeps], text: str, so
             model=llm,
             temperature=0.1,
             messages=[
-                {"role": "system", "content": f"Eres un traductor profesional especializado en terminología de medios de pago, reglas de VISA y Mastercard, y normativa financiera. Traduce el siguiente texto de {source_language} a {target_language}, manteniendo todos los términos técnicos y financieros correctos. La traducción debe sonar natural y ser adecuada para profesionales del sector."},
+                {"role": "system", "content": f"Eres un traductor profesional especializado en terminología regulatoria y normativa de cualquier sector e industria. Traduce el siguiente texto de {source_language} a {target_language}, manteniendo todos los términos técnicos y financieros correctos. La traducción debe sonar natural y ser adecuada para profesionales del sector."},
                 {"role": "user", "content": text}
             ]
         )
@@ -336,7 +338,7 @@ async def translate_query(ctx: RunContext[QueryUnderstandingDeps], text: str, so
 @query_understanding_agent.tool
 async def extract_entities(ctx: RunContext[QueryUnderstandingDeps], text: str) -> List[Entity]:
     """
-    Extrae entidades específicas del dominio de VISA y Mastercard del texto.
+    Extrae entidades específicas del dominio de normativas y regulaciones de cualquier sector del texto.
     
     Args:
         text: Texto donde buscar entidades
@@ -353,21 +355,23 @@ async def extract_entities(ctx: RunContext[QueryUnderstandingDeps], text: str) -
             temperature=0.1,
             response_format={"type": "json_object"},
             messages=[
-                {"role": "system", "content": """Eres un experto en extracción de entidades relacionadas con VISA, Mastercard y normativas de pagos.
+                {
+                    "role": "system",
+                    "content": """
+Eres un experto en extracción de entidades relacionadas con normativas y regulaciones de cualquier sector e industria.
 
 Tu tarea es identificar y extraer entidades específicas en el texto proporcionado. Las entidades a buscar incluyen:
 
-- regulation: Nombres de regulaciones y estándares (PCI DSS, 3DS, etc.)
-- process: Procesos específicos (onboarding, dispute resolution, etc.)
-- role: Roles de cumplimiento o actores del ecosistema
-- date: Fechas y plazos regulatorios
-- merchant_type: Tipo de establecimiento, merchant o PSP
-- program: Programas específicos de VISA/Mastercard
-- technical_requirement: Requerimientos técnicos
-- region: Regiones y jurisdicciones
-- card_type: Tipos de tarjetas o productos
-- fee: Tarifas o comisiones
-- parameter: Parámetros o valores numéricos específicos
+- regulation: Nombres de regulaciones, leyes y estándares (por ejemplo, GDPR, ISO 27001, FDA Title 21).
+- process: Procesos o actividades (por ejemplo, auditoría, reporte, certificación).
+- role: Roles y actores (oficial de cumplimiento, gestor de riesgos, auditor).
+- date: Fechas, plazos y vigencias.
+- organization_type: Tipo de organización o entidad (empresa, organismo regulador, tercero).
+- program: Programas o esquemas regulatorios (por ejemplo, programas de certificación).
+- technical_requirement: Requerimientos técnicos o técnicos-operativos.
+- region: Jurisdicciones y ámbitos geográficos.
+- fee: Tarifas, sanciones o comisiones.
+- parameter: Parámetros, umbrales o valores numéricos específicos.
 
 Devuelve un JSON con formato:
 {
@@ -380,7 +384,8 @@ Devuelve un JSON con formato:
     ...
   ]
 }
-"""},
+"""
+                },
                 {"role": "user", "content": text}
             ]
         )
@@ -397,6 +402,7 @@ Devuelve un JSON con formato:
     except Exception as e:
         logger.error(f"Error al extraer entidades: {e}")
         return []
+
 
 @query_understanding_agent.tool
 async def extract_keywords(ctx: RunContext[QueryUnderstandingDeps], text: str) -> List[Keyword]:
@@ -418,7 +424,7 @@ async def extract_keywords(ctx: RunContext[QueryUnderstandingDeps], text: str) -
             temperature=0.1,
             response_format={"type": "json_object"},
             messages=[
-                {"role": "system", "content": """Eres un experto en extracción de palabras clave para búsqueda semántica en el dominio de normativas de pagos, VISA y Mastercard.
+                {"role": "system", "content": """Eres un experto en extracción de palabras clave para búsqueda semántica en el dominio de normativas y regulaciones de cualquier sector e industria.
 
 Tu tarea es identificar y extraer las palabras clave más relevantes para mejorar la búsqueda de información relacionada con la consulta. Debes centrarte en términos que:
 
@@ -464,7 +470,7 @@ Limita la lista a las 5-10 palabras clave más relevantes.
 @query_understanding_agent.tool
 async def identify_technical_terms(ctx: RunContext[QueryUnderstandingDeps], text: str) -> Dict[str, str]:
     """
-    Identifica términos técnicos específicos de VISA y Mastercard en el texto y proporciona sus definiciones.
+    Identifica términos técnicos específicos sobre normativas y regulaciones de cualquier sector e industria en el texto y proporciona sus definiciones.
     
     Args:
         text: Texto donde buscar términos técnicos
@@ -481,7 +487,7 @@ async def identify_technical_terms(ctx: RunContext[QueryUnderstandingDeps], text
             temperature=0.1,
             response_format={"type": "json_object"},
             messages=[
-                {"role": "system", "content": """Eres un experto en terminología técnica de VISA, Mastercard y normativas de pagos.
+                {"role": "system", "content": """Eres un experto en terminología técnica de de normativas y regulaciones de cualquier sector e industria.
 
 Tu tarea es identificar términos técnicos específicos en el texto y proporcionar definiciones concisas.
 
@@ -542,7 +548,7 @@ async def expand_query(ctx: RunContext[QueryUnderstandingDeps], original_query: 
             model=llm,
             temperature=0.2,
             messages=[
-                {"role": "system", "content": """Eres un experto en expansión de consultas para mejorar la recuperación de información en el dominio de normativas de VISA y Mastercard.
+                {"role": "system", "content": """Eres un experto en expansión de consultas para mejorar la recuperación de información de normativas y regulaciones de cualquier sector e industria.
 
 Tu tarea es expandir la consulta original para incluir:
 1. Conceptos implícitos que no se mencionan explícitamente
@@ -597,7 +603,7 @@ async def evaluate_complexity(ctx: RunContext[QueryUnderstandingDeps], query: st
             temperature=0.1,
             response_format={"type": "json_object"},
             messages=[
-                {"role": "system", "content": """Eres un experto en análisis de consultas sobre normativas de VISA y Mastercard.
+                {"role": "system", "content": """Eres un experto en análisis de consultas sobre normativas y regulaciones de cualquier sector e industria.
 
 Tu tarea es evaluar la complejidad de la consulta y determinar si debe descomponerse en subconsultas para su procesamiento.
 
@@ -664,7 +670,7 @@ async def decompose_query(ctx: RunContext[QueryUnderstandingDeps], query: str, c
             temperature=0.2,
             response_format={"type": "json_object"},
             messages=[
-                {"role": "system", "content": """Eres un experto en descomposición de consultas complejas sobre normativas de VISA y Mastercard.
+                {"role": "system", "content": """Eres un experto en descomposición de consultas complejas sobre normativas y regulaciones de cualquier sector e industria.
 
 Tu tarea es descomponer una consulta compleja en subconsultas más simples y manejables, de forma que:
 1. Cada subconsulta aborde un aspecto específico de la consulta original
@@ -734,7 +740,7 @@ async def generate_search_query(ctx: RunContext[QueryUnderstandingDeps], origina
             messages=[
                 {"role": "system", "content": """Eres un experto en optimización de consultas para sistemas de recuperación de información vectorial y léxica.
 
-Tu tarea es generar una consulta optimizada que maximice la relevancia en la recuperación de documentos sobre normativas de VISA y Mastercard. La consulta debe:
+Tu tarea es generar una consulta optimizada que maximice la relevancia en la recuperación de documentos sobre normativas y regulaciones de cualquier sector e industria.. La consulta debe:
 
 1. Incluir términos clave que mejoren tanto la búsqueda semántica (vectorial) como léxica (BM25)
 2. Ser concisa pero completa, capturando todos los aspectos importantes
@@ -875,7 +881,7 @@ async def evaluate_query_complexity(query: str, openai_client) -> bool:
             temperature=0.0,
             response_format={"type": "json_object"},
             messages=[
-                {"role": "system", "content": """Evalúa si la siguiente consulta sobre normativas VISA/Mastercard es simple o compleja.
+                {"role": "system", "content": """Evalúa si la siguiente consulta sobre normativas y regulaciones de cualquier sector e industria.
                 Una consulta compleja contiene múltiples preguntas, abarca varios temas, o requiere información de diversas fuentes.
                 Responde con un JSON simple: {"is_complex": true/false}"""},
                 {"role": "user", "content": query}
@@ -951,7 +957,7 @@ async def analyze_intent_fast(openai_client, text: str) -> List[Intent]:
             temperature=0.1,
             response_format={"type": "json_object"},
             messages=[
-                {"role": "system", "content": "Identifica la intención principal de la consulta sobre normativas VISA/Mastercard. Responde con formato JSON: {\"intents\": [{\"name\": \"...\", \"confidence\": 0.9}]}"},
+                {"role": "system", "content": "Identifica la intención principal de la consulta sobre normativas y regulaciones de cualquier sector e industria. Responde con formato JSON: {\"intents\": [{\"name\": \"...\", \"confidence\": 0.9}]}"},
                 {"role": "user", "content": text}
             ]
         )
@@ -1102,7 +1108,7 @@ async def process_query(query: str, deps: QueryUnderstandingDeps) -> QueryInfo:
                     temperature=0.1,
                     response_format={"type": "json_object"},
                     messages=[
-                        {"role": "system", "content": """Identifica la intención principal de la consulta sobre normativas VISA/Mastercard. Responde con formato JSON: {\"intents\": [{\"name\": \"...\", \"confidence\": 0.9}]}"""},
+                        {"role": "system", "content": """Identifica la intención principal de la consulta sobre normativas y regulaciones de cualquier sector e industria. Responde con formato JSON: {\"intents\": [{\"name\": \"...\", \"confidence\": 0.9}]}"""},
                         {"role": "user", "content": query}
                     ]
                 )

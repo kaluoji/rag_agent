@@ -41,7 +41,7 @@ class ReportResult(BaseModel):
 
 # System prompt para orientar al agente en la generación del informe
 report_system_prompt = """
-Eres un agente experto en generación de reportes normativos sobre regulaciones de VISA y Mastercard. Tu tarea es crear informes estructurados que comuniquen claramente los hallazgos y recomendaciones.
+Eres un agente experto en generación de reportes normativos sobre regulaciones. Tu tarea es crear informes estructurados que comuniquen claramente los hallazgos y recomendaciones.
 
 Para informes en formato Word, debes incluir:
 1. Portada (título, subtítulo y fecha)
@@ -52,9 +52,7 @@ Para informes en formato Word, debes incluir:
 6. Recomendaciones
 7. Referencias
 
-Para informes en formato PowerPoint, debes estructurar la información en slides claras y concisas, con títulos, bullets points y visuales cuando sea posible.
-
-Utiliza la información proporcionada para detallar cada sección de forma clara y estructurada, siguiendo las normativas específicas de VISA y Mastercard según corresponda.
+Utiliza la información proporcionada para detallar cada sección de forma clara y estructurada, siguiendo las normativas específicas según corresponda.
 """
 
 # Inicialización del agente de reportes
@@ -137,7 +135,7 @@ async def generate_regulatory_report(ctx: RunContext[ReportDeps], analysis_data:
         
         # Crear el prompt para generar las secciones del informe
         prompt = f"""
-Con base en el siguiente análisis sobre normativas de VISA y Mastercard para pagos sin contacto:
+Con base en el siguiente análisis sobre normativas (según la que se solicite):
 
 {analysis_data}
 
@@ -163,10 +161,10 @@ Responde con un JSON estructurado así:
         # Generar el contenido del informe usando directamente el cliente de OpenAI
         completion = await ctx.deps.openai_client.chat.completions.create(
             model=llm,
-            temperature=0.2,
+            temperature=0.1,
             response_format={"type": "json_object"},
             messages=[
-                {"role": "system", "content": "Eres un experto en la generación de informes normativos sobre VISA y Mastercard. Crea un informe estructurado, profesional y detallado."},
+                {"role": "system", "content": "Eres un experto en la generación de informes normativos. Crea un informe estructurado, profesional y detallado."},
                 {"role": "user", "content": prompt}
             ]
         )
@@ -252,9 +250,9 @@ async def create_compliance_report(ctx: RunContext[ReportDeps], compliance_outpu
     # Llamada al modelo
     completion = await ctx.deps.openai_client.chat.completions.create(
         model=llm,
-        temperature=0.2,
+        temperature=0.1,
         messages=[
-            {"role": "system", "content": "Eres un experto en la generación de informes normativos sobre VISA y Mastercard. Crea un informe estructurado y profesional."},
+            {"role": "system", "content": "Eres un experto en la generación de informes normativos. Crea un informe estructurado y profesional."},
             {"role": "user", "content": prompt}
         ]
     )
@@ -343,7 +341,7 @@ async def process_report_query(query: str, analysis_data: str, deps: ReportDeps,
             
             completion = await deps.openai_client.chat.completions.create(
                 model=llm,
-                temperature=0.2,
+                temperature=0.1,
                 messages=[
                     {"role": "system", "content": "Eres un experto en informes normativos. Genera un resumen ejecutivo profesional y conciso."},
                     {"role": "user", "content": exec_summary_prompt}
@@ -357,7 +355,7 @@ async def process_report_query(query: str, analysis_data: str, deps: ReportDeps,
             
             completion = await deps.openai_client.chat.completions.create(
                 model=llm,
-                temperature=0.2,
+                temperature=0.1,
                 messages=[
                     {"role": "system", "content": "Eres un experto en informes normativos. Define claramente el alcance del informe."},
                     {"role": "user", "content": scope_prompt}
@@ -383,7 +381,7 @@ Estructura la información en subsecciones con títulos claros. Incluye datos es
             completion = await deps.openai_client.chat.completions.create(
                 model=llm,
                 max_tokens=2048,  # Permitir respuestas más largas
-                temperature=0.2,
+                temperature=0.1,
                 messages=[
                     {"role": "system", "content": "Eres un experto en análisis normativo. Elabora análisis detallados, específicos y bien estructurados."},
                     {"role": "user", "content": analysis_prompt}
@@ -397,7 +395,7 @@ Estructura la información en subsecciones con títulos claros. Incluye datos es
             
             completion = await deps.openai_client.chat.completions.create(
                 model=llm,
-                temperature=0.2,
+                temperature=0.1,
                 messages=[
                     {"role": "system", "content": "Eres un experto en informes normativos. Elabora conclusiones fundamentadas basadas en el análisis previo."},
                     {"role": "user", "content": conclusions_prompt}
@@ -411,7 +409,7 @@ Estructura la información en subsecciones con títulos claros. Incluye datos es
             
             completion = await deps.openai_client.chat.completions.create(
                 model=llm,
-                temperature=0.2,
+                temperature=0.1,
                 messages=[
                     {"role": "system", "content": "Eres un experto en informes normativos. Proporciona recomendaciones específicas y prácticas."},
                     {"role": "user", "content": recommendations_prompt}
@@ -425,7 +423,7 @@ Estructura la información en subsecciones con títulos claros. Incluye datos es
             
             completion = await deps.openai_client.chat.completions.create(
                 model=llm,
-                temperature=0.2,
+                temperature=0.1,
                 messages=[
                     {"role": "system", "content": "Eres un experto en informes normativos. Identifica las referencias relevantes."},
                     {"role": "user", "content": references_prompt}

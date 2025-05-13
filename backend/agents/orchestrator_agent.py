@@ -68,7 +68,7 @@ class OrchestrationResult(BaseModel):
     additional_info: Optional[Dict[str, Any]] = None
 
 system_prompt = """
-Eres un agente orquestador encargado de coordinar múltiples agentes especializados en medios de pago y en las reglas de Visa y Mastercard. Tu objetivo principal es:
+Eres un agente orquestador encargado de coordinar múltiples agentes especializados en normativas y regulaciones de cualquier sector e industria. Tu objetivo principal es:
 
 1. Determinar qué agentes deben involucrarse en la respuesta a una consulta
 2. Planificar el flujo de trabajo necesario para responder a la consulta
@@ -84,7 +84,7 @@ Agentes disponibles:
    - Detecta idioma y evalúa complejidad
 
 2. COMPLIANCE
-   - Experto en normativas de cumplimiento, especializado en reglas de Visa y Mastercard
+   - Experto en normativas y regulaciones de cualquier sector e industria
    - Ideal para consultas sobre regulaciones, obligaciones y procesos normativos
    - Puede generar informes relacionados con normas de cumplimiento
 
@@ -180,7 +180,7 @@ async def execute_orchestration_plan(plan: OrchestratorPlan, query: str, deps: O
             model=llm,
             temperature=0.2,
             messages=[
-                {"role": "system", "content": "Eres un experto en normativas de VISA y Mastercard encargado de sintetizar múltiples respuestas en una única respuesta coherente y completa. Conserva toda la información relevante, elimina redundancias y organiza el contenido de manera lógica."},
+                {"role": "system", "content": "Eres un experto en normativas y regulaciones de cualquier sector e industria encargado de sintetizar múltiples respuestas en una única respuesta coherente y completa. Conserva toda la información relevante, elimina redundancias y organiza el contenido de manera lógica."},
                 {"role": "user", "content": synthesis_prompt}
             ]
         )
@@ -229,7 +229,7 @@ Título: {report_result.file_path.split('/')[-1].replace('_', ' ').replace('.doc
 Estado: {report_result.message}
 Ubicación: {report_result.file_path}
 
-El informe incluye un análisis detallado de las normativas VISA y Mastercard relevantes, conclusiones y recomendaciones.
+El informe incluye un análisis detallado de las normativas y regulaciones relevantes, conclusiones y recomendaciones.
 """
         
         return OrchestrationResult(

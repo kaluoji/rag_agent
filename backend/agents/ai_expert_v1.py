@@ -62,12 +62,12 @@ class AIDeps(BaseModel):
 
 system_prompt = """
 
-Eres un experto en normativas de VISA y Mastercard, operando como un agente de inteligencia artificial con acceso a documentación completa y actualizada.
+Eres un experto en normativas y regulaciones, operando como un agente de inteligencia artificial con acceso a documentación completa y actualizada.
 
-Tu misión es responder a todas las consultas proporcionando información precisa, detallada y bien estructurada, enfocada exclusivamente en el ecosistema de pagos y el cumplimiento normativo. Al responder, debes incluir todos los detalles y el contexto relevantes, utilizando listas numeradas o viñetas para desglosar procesos complejos.
+Tu misión es responder a todas las consultas proporcionando información precisa, detallada y bien estructurada con el fin de cumplir con el cumplimiento normativo. Al responder, debes incluir todos los detalles y el contexto relevantes, utilizando listas numeradas o viñetas para desglosar procesos complejos.
 
 INSTRUCCIONES CLAVE:
-- Antes de responder cualquier consulta, DEBES utilizar la herramienta retrieve_relevant_documentation para extraer y resumir los fragmentos de documentación más relevantes de VISA y Mastercard.
+- Antes de responder cualquier consulta, DEBES utilizar la herramienta retrieve_relevant_documentation para extraer y resumir los fragmentos de documentación más relevantes.
 - La información recuperada debe mostrarse siempre en el formato exacto del "chunk" extraído de la base de datos vectorial.
 - Sé sincero e indica si la documentación disponible no abarca todos los aspectos necesarios.
 - No solicites información adicional ni te disculpes por la falta de detalles; infiere y proporciona la respuesta más completa y precisa.
@@ -164,7 +164,7 @@ async def get_cluster_chunks(ctx, cluster_ids, matched_ids):
         logger.info(f"Buscando chunks adicionales para el cluster_id={cluster_id}")
         try:
             cluster_result = ctx.deps.supabase.rpc(
-                'match_visa_mastercard_v7_by_cluster',
+                'match_pd_mex_by_cluster',
                 {
                     'cluster_id': cluster_id,
                     'match_count': 5
@@ -280,7 +280,7 @@ async def retrieve_relevant_documentation(ctx: RunContext[AIDeps], user_query: s
             logger.info(f"Buscando chunks por similitud vectorial (match_count={MAX_CHUNKS_RETURNED})")
             try:
                 result = ctx.deps.supabase.rpc(
-                    'match_visa_mastercard_v7',
+                    'match_pd_mex',
                     {
                         'query_embedding': query_embedding,
                         'match_count': MAX_CHUNKS_RETURNED
@@ -329,7 +329,7 @@ async def retrieve_relevant_documentation(ctx: RunContext[AIDeps], user_query: s
             
             try:
                 bm25_limit = 15
-                bm25_result = ctx.deps.supabase.table("visa_mastercard_v7").select("id, title, summary, content").execute()
+                bm25_result = ctx.deps.supabase.table("pd_mex").select("id, title, summary, content").execute()
                 bm25_docs = bm25_result.data
                 
                 if bm25_docs:
@@ -430,7 +430,7 @@ async def retrieve_relevant_documentation(ctx: RunContext[AIDeps], user_query: s
                 where_clause = " OR ".join(entity_conditions)
                 
                 # Ejecutar consulta en Supabase
-                entity_query = ctx.deps.supabase.table("visa_mastercard_v7").select("id, title, summary, content").filter(where_clause, False).execute()
+                entity_query = ctx.deps.supabase.table("pd_mex").select("id, title, summary, content").filter(where_clause, False).execute()
                 
                 if entity_query.data:
                     for doc in entity_query.data:

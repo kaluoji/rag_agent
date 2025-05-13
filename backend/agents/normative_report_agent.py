@@ -216,9 +216,9 @@ async def retrieve_regulatory_information(
             logger.warning("Received a zero embedding vector. Skipping search.")
             return "No se encontró información normativa relevante."
         
-        # Buscar información relevante en la tabla de visa_mastercard_v5
+        # Buscar información relevante en la tabla de pd_mex
         result = ctx.deps.supabase.rpc(
-            'match_visa_mastercard_v5',
+            'match_pd_mex',
             {
                 'query_embedding': query_embedding,
                 'match_count': 15  # Limitamos a 15 resultados relevantes

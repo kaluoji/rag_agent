@@ -601,7 +601,7 @@ async def process_chunk(chunk_with_metadata: Dict, chunk_number: int, identifier
 
 async def insert_chunk(chunk: ProcessedChunk):
     """
-    Inserta el fragmento procesado en la tabla 'visa_mastercard_v7' de Supabase.
+    Inserta el fragmento procesado en la tabla 'pd_mex' de Supabase.
     Si falla, guarda los datos localmente para procesamiento posterior.
     """
     try:
@@ -614,7 +614,7 @@ async def insert_chunk(chunk: ProcessedChunk):
             "metadata": chunk.metadata,
             "embedding": chunk.embedding
         }
-        result = supabase.table("visa_mastercard_v7").insert(data).execute()
+        result = supabase.table("pd_mex").insert(data).execute()
         logging.info(f"Inserted chunk {chunk.chunk_number} for {chunk.url}")
         return result
     except Exception as e:
