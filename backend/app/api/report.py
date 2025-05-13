@@ -1,9 +1,11 @@
-from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks, Path
+from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks, Path, Query, Body
 from fastapi.responses import FileResponse, HTMLResponse
 from typing import List, Dict, Any
 import logging
 import uuid
 import os
+import base64
+import json
 from datetime import datetime
 from app.models.schemas import ReportRequest, ReportResponse, AnnotationsRequest, Annotation
 from app.services.report_service import ReportService, get_report_service
@@ -197,3 +199,140 @@ async def save_annotations(
             status_code=500,
             detail=f"Error al guardar anotaciones: {str(e)}"
         )
+
+@router.get("/content_by_id/{report_id}")
+async def get_report_content_by_id(
+    report_id: str = Path(..., description="ID del reporte (formato: 20250426_102841)"),
+):
+    """
+    Obtiene el contenido base64 de un archivo de reporte por su ID.
+    """
+    try:
+        # Construir la ruta basada en el ID
+        path = f"output/reports/Reporte_Normativo_{report_id}.docx"
+        
+        # Verificar que el archivo existe
+        if not os.path.exists(path):
+            raise HTTPException(
+                status_code=404,
+                detail=f"Archivo no encontrado para el ID: {report_id}"
+            )
+            
+        # Leer el archivo y convertirlo a base64
+        with open(path, "rb") as file:
+            content = file.read()
+            base64_content = base64.b64encode(content).decode("utf-8")
+            
+        # Obtener el nombre del archivo
+        filename = os.path.basename(path)
+        
+        return {
+            "success": True,
+            "filename": filename,
+            "base64Content": base64_content
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error al obtener contenido del archivo: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error al obtener contenido del archivo: {str(e)}"
+        )
+
+@router.get("/content_by_id/{report_id}/download")
+async def download_report_by_id(
+    report_id: str = Path(..., description="ID del reporte (formato: 20250426_102841)"),
+):
+    """
+    Descarga un archivo de reporte por su ID.
+    """
+    try:
+        # Construir la ruta basada en el ID
+        path = f"output/reports/Reporte_Normativo_{report_id}.docx"
+        
+        # Verificar que el archivo existe
+        if not os.path.exists(path):
+            raise HTTPException(
+                status_code=404,
+                detail=f"Archivo no encontrado para el ID: {report_id}"
+            )
+            
+        # Obtener el nombre del archivo
+        filename = os.path.basename(path)
+        
+        return FileResponse(
+            path=path,
+            filename=filename,
+            media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error al descargar el archivo: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error al descargar el archivo: {str(e)}"
+        )
+
+@router.post("/annotations/{report_id}")
+async def save_report_annotations(
+    report_id: str = Path(..., description="ID del reporte (formato: 20250426_102841)"),
+    request_data: dict = Body(...),
+):
+    """
+    Guarda anotaciones para un documento específico.
+    """
+    try:
+        annotations = request_data.get("annotations", [])
+        
+        # Validar que el reporte existe
+        path = f"output/reports/Reporte_Normativo_{report_id}.docx"
+        if not os.path.exists(path):
+            raise HTTPException(
+                status_code=404,
+                detail=f"Documento no encontrado para el ID: {report_id}"
+            )
+        
+        # Guardar las anotaciones en un archivo JSON asociado al documento
+        annotations_path = f"output/reports/annotations_{report_id}.json"
+        
+        with open(annotations_path, "w", encoding="utf-8") as f:
+            json.dump(annotations, f, ensure_ascii=False, indent=2)
+        
+        return {"success": True, "message": "Anotaciones guardadas correctamente"}
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error al guardar anotaciones: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error al guardar anotaciones: {str(e)}"
+        )
+
+@router.get("/annotations/{report_id}")
+async def get_report_annotations(
+    report_id: str = Path(..., description="ID del reporte (formato: 20250426_102841)"),
+):
+    """
+    Obtiene las anotaciones de un documento específico.
+    """
+    try:
+        # Verificar que el archivo de anotaciones existe
+        annotations_path = f"output/reports/annotations_{report_id}.json"
+        
+        if not os.path.exists(annotations_path):
+            return {"annotations": []}
+        
+        # Leer las anotaciones del archivo
+        with open(annotations_path, "r", encoding="utf-8") as f:
+            annotations = json.load(f)
+        
+        return {"annotations": annotations}
+    
+    except Exception as e:
+        logger.error(f"Error al obtener anotaciones: {str(e)}")
+        return {"annotations": []}

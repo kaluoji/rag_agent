@@ -38,7 +38,7 @@ class ReportService:
         
         # Inicializar cliente de OpenAI
         self.openai_client = AsyncOpenAI(
-            api_key=settings.OPENAI_API_KEY
+            api_key=settings.openai_api_key
         )
         
         # Preparar dependencias para el generador de reportes

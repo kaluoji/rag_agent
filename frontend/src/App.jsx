@@ -1,4 +1,4 @@
-// frontend/src/App.jsx
+// frontend/src/App.jsx (Modificado)
 import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import AppLayout from './layouts/AppLayout';
@@ -7,6 +7,9 @@ import ConsultaHistorialPage from './pages/ConsultaHistorialPage';
 import NovedadesPage from './pages/NovedadesPage';
 import ThemeProvider from './theme/ThemeProvider';
 import { useQueryStore } from './contexts/store';
+
+// Importamos los componentes que necesitaremos para la previsualización
+import DocxPreviewPanel from './components/DocxPreviewPanel';
 
 function App() {
   // Get the function to load stored queries
@@ -24,7 +27,6 @@ function App() {
             <Route path="/" element={<MainPage />} />
             <Route path="/consulta/:id" element={<ConsultaHistorialPage />} />
             <Route path="/novedades" element={<NovedadesPage />} />
-            {/* Puedes agregar más rutas aquí según sea necesario */}
           </Routes>
         </AppLayout>
       </Router>

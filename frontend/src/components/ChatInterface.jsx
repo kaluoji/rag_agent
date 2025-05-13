@@ -1,3 +1,4 @@
+// frontend/src/components/ChatInterface.jsx (modificado)
 import React, { useState, useRef, useEffect } from 'react';
 import { 
   Box, 
@@ -7,11 +8,16 @@ import {
   Divider,
   Paper,
   Grid,
-  Fade,   // Añadido para animaciones
-  Zoom    // Añadido para animaciones
+  Fade,
+  Zoom,
+  IconButton,
+  Tooltip
 } from '@mui/material';
 import ReactMarkdown from 'react-markdown';
 import ChatInputArea from './ChatInputArea';
+import DocxPreviewPanel from './DocxPreviewPanel';
+import VisibilityIcon from '@mui/icons-material/Visibility';
+import DescriptionIcon from '@mui/icons-material/Description';
 
 // Importamos la imagen del avatar del agente
 import agentAvatar from '../assets/a.png';
@@ -19,7 +25,36 @@ import agentAvatar from '../assets/a.png';
 import logoImage from '../assets/ablack.png';
 
 // Componente para un mensaje individual en el chat
-const ChatMessage = ({ message, isUser }) => {
+const ChatMessage = ({ message, isUser, onViewReport }) => {
+  // Estado para almacenar la información del reporte si existe
+  const [reportInfo, setReportInfo] = useState(null);
+  
+  // Al montar el componente, analizar el mensaje para detectar informe
+  useEffect(() => {
+    if (!isUser && message) {
+      // Verificar si el mensaje contiene información de un reporte
+      const hasTitulo = message.includes('Título:');
+      const hasUbicacion = message.includes('Ubicación:');
+      
+      if (hasTitulo && hasUbicacion) {
+        try {
+          // Extraer la información del reporte usando regex
+          const titleMatch = message.match(/Título:\s+([^\n]+)/);
+          const locationMatch = message.match(/Ubicación:\s+([^\n]+)/);
+          
+          if (titleMatch && locationMatch) {
+            setReportInfo({
+              title: titleMatch[1].trim(),
+              path: locationMatch[1].trim()
+            });
+          }
+        } catch (error) {
+          console.error('Error al analizar información del reporte:', error);
+        }
+      }
+    }
+  }, [message, isUser]);
+
   return (
     <Box 
       sx={{ 
@@ -27,7 +62,7 @@ const ChatMessage = ({ message, isUser }) => {
         mb: 2,
         flexDirection: isUser ? 'row-reverse' : 'row',
       }}
-      className="chat-message" // Añadido para efectos hover
+      className="chat-message"
     >
       {isUser ? (
         <Avatar 
@@ -48,7 +83,7 @@ const ChatMessage = ({ message, isUser }) => {
             height: 38,
             mr: 1,
             borderRadius: '50%',
-            bgcolor: '#4F062A', // Color de fondo que coincide con el header
+            bgcolor: '#4F062A',
             display: 'flex',
             justifyContent: 'center',
             alignItems: 'center',
@@ -74,12 +109,11 @@ const ChatMessage = ({ message, isUser }) => {
           maxWidth: '80%',
           bgcolor: isUser ? '#4F062A' : 'grey.100',
           color: isUser ? 'white' : 'inherit',
-          borderRadius: '16px', // Ajustado para ser coherente con los demás elementos
+          borderRadius: '16px',
         }}
       >
         {isUser ? (
           <Typography variant="body1" sx={{ whiteSpace: 'pre-line', color: 'inherit', fontSize: '1.05rem' }}>
-            {/* Procesar texto con posibles marcas de color amarillo */}
             {message.split(/(\¿Listo para hablar compliance\?)/).map((part, index) => {
               if (part === '¿Listo para hablar compliance?') {
                 return <span key={index} className="highlighted-text">{part}</span>;
@@ -88,41 +122,76 @@ const ChatMessage = ({ message, isUser }) => {
             })}
           </Typography>
         ) : (
-          <Box className="markdown-content" sx={{ 
-            '& p': { mt: 0, mb: 2, fontSize: '1.05rem' },
-            '& ul, & ol': { mt: 0, mb: 2, pl: 3 },
-            '& code': { 
-              p: 0.5, 
-              borderRadius: 1, 
-              bgcolor: 'rgba(0, 0, 0, 0.04)', 
-              fontFamily: 'monospace' 
-            },
-            '& pre': { 
-              p: 1.5, 
-              borderRadius: 1, 
-              bgcolor: 'rgba(0, 0, 0, 0.04)', 
-              overflowX: 'auto',
-              '& code': { p: 0, bgcolor: 'transparent' }
-            },
-            '& blockquote': { 
-              borderLeft: '4px solid #e0e0e0', 
-              pl: 2, 
-              ml: 0, 
-              fontStyle: 'italic' 
-            },
-            '& h1, & h2, & h3, & h4, & h5, & h6': { 
-              mt: 2, 
-              mb: 1 
-            },
-            '& mark': {
-              backgroundColor: '#ffeb3b',
-              padding: '2px 4px',
-              fontSize: '1.4em',
-              fontWeight: 500,
-              borderRadius: '3px'
-            }
-          }}>
+          <Box 
+            className="markdown-content" 
+            sx={{ 
+              '& p': { mt: 0, mb: 2, fontSize: '1.05rem' },
+              '& ul, & ol': { mt: 0, mb: 2, pl: 3 },
+              '& code': { 
+                p: 0.5, 
+                borderRadius: 1, 
+                bgcolor: 'rgba(0, 0, 0, 0.04)', 
+                fontFamily: 'monospace' 
+              },
+              '& pre': { 
+                p: 1.5, 
+                borderRadius: 1, 
+                bgcolor: 'rgba(0, 0, 0, 0.04)', 
+                overflowX: 'auto',
+                '& code': { p: 0, bgcolor: 'transparent' }
+              },
+              '& blockquote': { 
+                borderLeft: '4px solid #e0e0e0', 
+                pl: 2, 
+                ml: 0, 
+                fontStyle: 'italic' 
+              },
+              '& h1, & h2, & h3, & h4, & h5, & h6': { 
+                mt: 2, 
+                mb: 1 
+              },
+              '& mark': {
+                backgroundColor: '#ffeb3b',
+                padding: '2px 4px',
+                fontSize: '1.4em',
+                fontWeight: 500,
+                borderRadius: '3px'
+              },
+              position: 'relative', // Para el botón de previsualización
+            }}
+          >
             <ReactMarkdown>{message}</ReactMarkdown>
+            
+            {/* Botón para previsualizar informe si existe */}
+            {reportInfo && (
+              <Box sx={{ 
+                mt: 2, 
+                display: 'flex', 
+                alignItems: 'center',
+                p: 1,
+                borderTop: '1px solid rgba(0,0,0,0.1)'
+              }}>
+                <DescriptionIcon sx={{ mr: 1, color: '#4F062A' }} />
+                <Typography variant="body2" sx={{ flexGrow: 1 }}>
+                  Documento generado: {reportInfo.title.split('/').pop()}
+                </Typography>
+                <Tooltip title="Ver documento">
+                  <IconButton 
+                    size="small"
+                    onClick={() => onViewReport(reportInfo)}
+                    sx={{ 
+                      color: '#4F062A',
+                      backgroundColor: 'rgba(79, 6, 42, 0.1)',
+                      '&:hover': {
+                        backgroundColor: 'rgba(79, 6, 42, 0.2)',
+                      }
+                    }}
+                  >
+                    <VisibilityIcon fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+              </Box>
+            )}
           </Box>
         )}
       </Paper>
@@ -137,6 +206,10 @@ const ChatInterface = ({ onSubmitQuery, isLoading }) => {
   
   // Estado para controlar las animaciones
   const [showWelcome, setShowWelcome] = useState(false);
+  
+  // Estado para el panel de previsualización de documentos
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewReport, setPreviewReport] = useState(null);
 
   // Scroll al final cuando se agregan nuevos mensajes
   const scrollToBottom = () => {
@@ -163,6 +236,17 @@ const ChatInterface = ({ onSubmitQuery, isLoading }) => {
       ...prevHistory,
       { isUser: false, text: response }
     ]);
+  };
+  
+  // Manejar visualización de reporte
+  const handleViewReport = (reportInfo) => {
+    setPreviewReport(reportInfo);
+    setPreviewOpen(true);
+  };
+  
+  // Cerrar panel de previsualización
+  const handleClosePreview = () => {
+    setPreviewOpen(false);
   };
 
   return (
@@ -296,7 +380,8 @@ const ChatInterface = ({ onSubmitQuery, isLoading }) => {
               <ChatMessage 
                 key={index} 
                 message={msg.text} 
-                isUser={msg.isUser} 
+                isUser={msg.isUser}
+                onViewReport={handleViewReport}
               />
             ))}
           </Box>
@@ -327,7 +412,7 @@ const ChatInterface = ({ onSubmitQuery, isLoading }) => {
       </Box>
       
       {/* Área de entrada - fijada en la parte inferior */}
-      <Box sx={{ flexShrink: 0 }}> {/* Impide que se contraiga */}
+      <Box sx={{ flexShrink: 0 }}>
         <ChatInputArea 
           onSendMessage={(message) => {
             // Agregar consulta del usuario al historial
@@ -342,6 +427,14 @@ const ChatInterface = ({ onSubmitQuery, isLoading }) => {
           isLoading={isLoading}
         />
       </Box>
+      
+      {/* Panel de previsualización de documentos */}
+      <DocxPreviewPanel
+        open={previewOpen}
+        onClose={handleClosePreview}
+        reportPath={previewReport?.path}
+        reportTitle={previewReport?.title}
+      />
     </Box>
   );
 };

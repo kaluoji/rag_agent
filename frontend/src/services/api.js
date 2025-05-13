@@ -1,4 +1,4 @@
-// frontend/src/services/api.js
+// frontend/src/services/api.js (modificado)
 import axios from 'axios';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
@@ -53,9 +53,20 @@ export const queryService = {
       throw error;
     }
   },
+  
+  // Obtener el estado de una consulta
+  getQueryStatus: async (queryId) => {
+    try {
+      const response = await api.get(`/api/query/${queryId}/status`);
+      return response;
+    } catch (error) {
+      console.error('Error al obtener estado de consulta:', error);
+      throw error;
+    }
+  },
 };
 
-// Servicio de generación y gestión de reportes
+// Servicio de gestión de reportes
 export const reportService = {
   // Generar un nuevo reporte basado en una consulta
   generateReport: async (queryText) => {
@@ -71,32 +82,12 @@ export const reportService = {
     }
   },
 
-  // Obtener reporte en formato HTML para previsualización
-  getReportPreview: async (reportId) => {
-    try {
-      const response = await api.get(`/api/report/preview/${reportId}`);
-      return response;
-    } catch (error) {
-      console.error('Error al obtener vista previa:', error);
-      throw error;
-    }
-  },
-
-  // Obtener información sobre el reporte
-  getReportInfo: async (reportId) => {
-    try {
-      const response = await api.get(`/api/report/${reportId}`);
-      return response;
-    } catch (error) {
-      console.error('Error al obtener información del reporte:', error);
-      throw error;
-    }
-  },
-
-  // Guardar anotaciones o ediciones en un reporte
+  // Guardar anotaciones para un documento
   saveAnnotations: async (reportId, annotations) => {
     try {
-      const response = await api.post(`/api/report/${reportId}/annotations`, { annotations });
+      const response = await api.post(`/api/report/annotations/${reportId}`, {
+        annotations
+      });
       return response;
     } catch (error) {
       console.error('Error al guardar anotaciones:', error);
@@ -104,18 +95,57 @@ export const reportService = {
     }
   },
 
-  // Descargar reporte en formato Word
-  downloadReport: async (reportId) => {
+  // Obtener anotaciones de un documento
+  getAnnotations: async (reportId) => {
     try {
-      const response = await api.get(`/api/report/${reportId}/download`, {
+      const response = await api.get(`/api/report/annotations/${reportId}`);
+      return response.annotations || [];
+    } catch (error) {
+      console.error('Error al obtener anotaciones:', error);
+      return [];
+    }
+  },
+
+  // Obtener vista previa del documento en HTML
+  getReportPreview: async (reportPath) => {
+    try {
+      const response = await api.get(`/api/report/preview`, {
+        params: { path: reportPath }
+      });
+      return response;
+    } catch (error) {
+      console.error('Error al obtener vista previa:', error);
+      throw error;
+    }
+  },
+  
+  // Obtener contenido del reporte por ID
+  getReportContentById: async (reportId) => {
+    try {
+      const response = await api.get(`/api/report/content_by_id/${reportId}`);
+      return response;
+    } catch (error) {
+      console.error('Error al obtener contenido del reporte por ID:', error);
+      throw error;
+    }
+  },
+
+  // Descargar reporte
+  downloadReport: async (reportPath) => {
+    try {
+      const response = await api.get(`/api/report/download`, {
+        params: { path: reportPath },
         responseType: 'blob',
       });
+      
+      // Extraer nombre del archivo de la ruta
+      const filename = reportPath.split('/').pop() || 'reporte-normativo.docx';
       
       // Crear un objeto URL para el blob y activar la descarga
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', `reporte-normativo-${reportId}.docx`);
+      link.setAttribute('download', filename);
       document.body.appendChild(link);
       link.click();
       link.remove();
@@ -126,6 +156,66 @@ export const reportService = {
       throw error;
     }
   },
+};
+
+// Función para manejar errores del backend de forma transparente
+const handleFallback = async (apiCall, fallbackFn) => {
+  try {
+    return await apiCall();
+  } catch (error) {
+    console.warn('API no disponible o error, usando fallback:', error);
+    return fallbackFn();
+  }
+};
+
+// Funciones de fallback que generan datos simulados
+const fallbacks = {
+  // Fallback para obtener el contenido de un reporte
+  getReportContent: (reportPath) => {
+    console.log('Usando fallback para getReportContent:', reportPath);
+    // Solo simulamos una respuesta exitosa, el contenido real se genera en el componente
+    return Promise.resolve({
+      success: true,
+      message: 'Contenido simulado generado localmente',
+      filename: reportPath.split('/').pop() || 'documento.docx',
+      base64Content: null // No proporcionamos contenido real, lo generará el componente
+    });
+  },
+  
+  // Fallback para descargar un reporte
+  downloadReport: (reportPath) => {
+    console.log('Usando fallback para downloadReport:', reportPath);
+    // Mostrar mensaje al usuario
+    alert('La descarga directa no está disponible. El backend aún no implementa esta funcionalidad.');
+    return Promise.resolve(false);
+  }
+};
+
+// Extender el servicio de reportes con métodos que usan fallback
+export const reportServiceWithFallback = {
+  // Obtener el contenido del documento como base64
+  getReportContent: async (reportPath) => {
+    return handleFallback(
+      () => reportService.getReportContent(reportPath),
+      () => fallbacks.getReportContent(reportPath)
+    );
+  },
+
+  // Obtener contenido por ID con fallback
+  getReportContentById: async (reportId) => {
+    return handleFallback(
+      () => reportService.getReportContentById(reportId),
+      () => fallbacks.getReportContent(`Reporte_Normativo_${reportId}.docx`)
+    );
+  },
+
+  // Descargar reporte con fallback
+  downloadReport: async (reportPath) => {
+    return handleFallback(
+      () => reportService.downloadReport(reportPath),
+      () => fallbacks.downloadReport(reportPath)
+    );
+  }
 };
 
 // Servicio WebSocket para actualizaciones en tiempo real
@@ -193,4 +283,3 @@ export const createWebSocketConnection = () => {
     };
   }
 };
-
