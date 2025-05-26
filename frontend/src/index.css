@@ -374,3 +374,68 @@ html, body {
   overflow: hidden;
   min-height: 0; /* Crucial para que flex funcione correctamente */
 }
+
+
+/* Estilos mejorados para tablas en markdown */
+.markdown-content table {
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.markdown-content th {
+  background: linear-gradient(135deg, #4F062A 0%, #7A1149 100%);
+  position: relative;
+}
+
+.markdown-content th::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+}
+
+.markdown-content td {
+  position: relative;
+}
+
+.markdown-content tbody tr:hover {
+  box-shadow: 0 2px 8px rgba(79, 6, 42, 0.1);
+  transform: translateY(-1px);
+}
+
+/* Estilos para citas legales */
+.markdown-content .legal-citation {
+  background: linear-gradient(135deg, rgba(79, 6, 42, 0.05) 0%, rgba(79, 6, 42, 0.02) 100%);
+  border-left: 4px solid #4F062A;
+  padding: 16px;
+  margin: 16px 0;
+  border-radius: 8px;
+  position: relative;
+  overflow: hidden;
+}
+
+.markdown-content .legal-citation::before {
+  content: '"';
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  font-size: 3rem;
+  color: rgba(79, 6, 42, 0.1);
+  font-family: Georgia, serif;
+  line-height: 1;
+}
+
+/* Responsive tables */
+@media (max-width: 768px) {
+  .markdown-content table {
+    font-size: 0.8rem;
+  }
+  
+  .markdown-content th,
+  .markdown-content td {
+    padding: 8px 12px;
+  }
+}

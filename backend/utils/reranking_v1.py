@@ -275,11 +275,21 @@ async def improved_evaluate_chunk_relevance(
     truncated_chunk = split_chunk_for_evaluation(chunk)
     
     eval_prompt = f"""
-Necesito que evalúes la relevancia del siguiente fragmento de texto en relación con la consulta del usuario, considerando estos tres criterios:
+Eres un experto en análisis de documentos normativos. Evalúa la relevancia del siguiente fragmento respecto a la consulta, considerando que se trata de texto regulatorio.
 
-1. Pertinencia global: ¿Cuán directamente responde el fragmento a la consulta?
-2. Precisión y exactitud: ¿Contiene el fragmento información exacta y correcta?
-3. Nivel de detalle: ¿Proporciona el fragmento suficientes matices y detalles?
+CRITERIOS DE EVALUACIÓN:
+1. Pertinencia temática (0-10): ¿El fragmento trata específicamente el tema consultado?
+2. Aplicabilidad directa (0-10): ¿Las disposiciones son directamente aplicables al caso planteado?
+3. Completitud normativa (0-10): ¿El fragmento contiene disposiciones completas y no cortadas?
+4. Jerarquía normativa (0-10): ¿Cuál es el rango jerárquico de la fuente? (Constitución=10, Ley=8-9, Reglamento=6-7, Resolución=4-5, Circular=1-3)
+5. Referencias cruzadas (0-10): ¿El fragmento incluye remisiones útiles a otros artículos o normas relevantes para completar la respuesta?
+
+ESCALA DE PUNTUACIÓN:
+- 0: Completamente irrelevante/ausente
+- 1-3: Mínimamente presente/útil
+- 4-6: Moderadamente presente/útil
+- 7-8: Altamente presente/útil
+- 9-10: Óptimo/Perfecto para el criterio
 
 Consulta: "{query}"
 
@@ -288,21 +298,23 @@ Fragmento a evaluar:
 {truncated_chunk}
 ---
 
-Para cada criterio, asigna un puntaje del 0 al 10 donde:
-- 0-2: No relevante/No útil
-- 3-4: Apenas relevante
-- 5-6: Moderadamente relevante
-- 7-8: Muy relevante
-- 9-10: Extremadamente relevante/Respuesta perfecta
+INSTRUCCIONES ESPECIALES:
+- Para jerarquía normativa: Considera que normas de mayor rango tienen precedencia interpretativa
+- Para referencias cruzadas: Valora positivamente fragmentos que incluyan "véase también", "en concordancia con", remisiones a otros artículos, etc.
+- Evalúa si el fragmento está completo o cortado artificialmente
+- Penaliza fragmentos que requieran contexto adicional para ser útiles
 
-Calcula el puntaje global: 0.4*(Pertinencia) + 0.3*(Precisión) + 0.3*(Detalle)
+Puntaje global: 0.35*(Pertinencia) + 0.25*(Aplicabilidad) + 0.15*(Completitud) + 0.15*(Jerarquía) + 0.10*(Referencias)
 
-Responde ÚNICAMENTE en formato JSON con esta estructura:
+Responde ÚNICAMENTE en formato JSON:
 {{
-  "pertinencia": valorNumérico,
-  "precision": valorNumérico,
-  "detalle": valorNumérico,
-  "global": valorNumérico
+  "pertenencia": valor,
+  "aplicabilidad": valor,
+  "completitud": valor,
+  "jerarquia": valor,
+  "referencias": valor,
+  "global": valor,
+  "justificacion_breve": "explicación en 1-2 líneas sobre los criterios más determinantes"
 }}
 """
     try:
@@ -323,18 +335,20 @@ Responde ÚNICAMENTE en formato JSON con esta estructura:
             
             # Extraer puntajes individuales o usar valores por defecto
             criteria_scores = {
-                "pertinencia": float(scores.get("pertinencia", 0)),
-                "precision": float(scores.get("precision", 0)),
-                "detalle": float(scores.get("detalle", 0))
+                "pertenencia": float(scores.get("pertenencia", 0)),
+                "aplicabilidad": float(scores.get("aplicabilidad", 0)),
+                "completitud": float(scores.get("completitud", 0)),
+                "jerarquia": float(scores.get("jerarquia", 0)),
+                "referencias": float(scores.get("referencias", 0))
             }
             
             # Validar el puntaje global
             if not (0 <= global_score <= 10):
                 # Recalcular si está fuera de rango
-                global_score = 0.4 * criteria_scores["pertinencia"] + 0.3 * criteria_scores["precision"] + 0.3 * criteria_scores["detalle"]
+                global_score = 0.35 * criteria_scores["pertenencia"] + 0.25 * criteria_scores["aplicabilidad"] + 0.15 * criteria_scores["completitud"] + 0.15 * criteria_scores["jerarquia"] + 0.10 * criteria_scores["referencias"]
                 global_score = max(0, min(10, global_score))  # Asegurar rango 0-10
             
-            logger.info(f"Chunk '{title[:30]}...' - Puntuación: Global={global_score:.1f}, P={criteria_scores['pertinencia']:.1f}, E={criteria_scores['precision']:.1f}, D={criteria_scores['detalle']:.1f}")
+            logger.info(f"Chunk '{title[:30]}...' - Puntuación: Global={global_score:.1f}, P={criteria_scores['pertenencia']:.1f}, A={criteria_scores['aplicabilidad']:.1f}, C={criteria_scores['completitud']:.1f}, J={criteria_scores['jerarquia']:.1f}, R={criteria_scores['referencias']:.1f}")
             return global_score, criteria_scores
             
         except (json.JSONDecodeError, ValueError, KeyError) as json_err:
@@ -348,14 +362,14 @@ Responde ÚNICAMENTE en formato JSON con esta estructura:
                 global_score = max(0, min(10, global_score))  # Asegurar rango 0-10
                 logger.info(f"Chunk '{title[:30]}...' - Puntuación extraída con regex: {global_score}")
                 # Valor por defecto para criterios individuales
-                return global_score, {"pertinencia": global_score, "precision": global_score, "detalle": global_score}
+                return global_score, {"pertenencia": global_score, "aplicabilidad": global_score, "completitud": global_score, "jerarquia": global_score, "referencias": global_score}
             else:
                 logger.error(f"No se pudo extraer ningún puntaje numérico de: '{response_text}'")
-                return 0.0, {"pertinencia": 0, "precision": 0, "detalle": 0}
+                return 0.0, {"pertenencia": 0, "aplicabilidad": 0, "completitud": 0, "jerarquia": 0, "referencias": 0}
     
     except Exception as e:
         logger.error(f"Error en evaluate_chunk_relevance para '{title[:30]}...': {e}")
-        return 0.0, {"pertinencia": 0, "precision": 0, "detalle": 0}
+        return 0.0, {"pertenencia": 0, "aplicabilidad": 0, "completitud": 0, "jerarquia": 0, "referencias": 0}
 
 def smart_normalize(scores: List[float], min_threshold: float = 0.1) -> np.ndarray:
     """
@@ -651,12 +665,14 @@ async def analyze_and_adjust_weights(
     default_weights: Dict[str, float]
 ) -> Dict[str, float]:
     """
-    Analiza la consulta para ajustar dinámicamente los pesos del reranking.
+    Analiza la consulta para ajustar dinámicamente los pesos del reranking
+    para un agente experto en legal y compliance genérico.
     
     Características que influyen:
-    - Consultas específicas vs. generales
-    - Presencia de términos técnicos o palabras clave
-    - Longitud y complejidad de la consulta
+    - Tipo de dominio legal (financiero, laboral, corporativo, etc.)
+    - Naturaleza de la consulta (interpretación vs. búsqueda específica)
+    - Nivel de especificidad técnica
+    - Referencias temporales o jurisdiccionales
     
     Args:
         ctx: Contexto de ejecución
@@ -668,53 +684,204 @@ async def analyze_and_adjust_weights(
     """
     # Copiar pesos por defecto
     weights = default_weights.copy()
+    query_lower = query.lower()
     
-    # Características básicas de la consulta
+    # === ANÁLISIS DE DOMINIO LEGAL ===
+    
+    # Términos técnicos legales generales
+    legal_technical_terms = [
+        # Documentos legales
+        "artículo", "artículos", "inciso", "fracción", "párrafo", "capítulo",
+        "ley", "decreto", "reglamento", "resolución", "circular", "acuerdo",
+        "código", "constitución", "convenio", "tratado", "norma", "normativa",
+        
+        # Procesos legales
+        "jurisprudencia", "sentencia", "resolución", "dictamen", "criterio",
+        "interpretación", "precedente", "caso", "expediente",
+        
+        # Compliance y regulatorio
+        "cumplimiento", "infracción", "sanción", "multa", "penalización",
+        "auditoría", "supervisión", "autoridad", "regulador", "organismo",
+        "debido proceso", "diligencia debida", "kyc", "aml"
+    ]
+    
+    # Términos por dominio específico
+    financial_terms = [
+        "financiero", "bancario", "bursátil", "seguros", "fintech",
+        "visa", "mastercard", "tarifa", "comisión", "interchange",
+        "adquirente", "emisor", "transacción", "lavado", "prevención",
+        "cnbv", "banxico", "condusef", "shcp"
+    ]
+    
+    corporate_terms = [
+        "corporativo", "empresarial", "mercantil", "societario",
+        "consejo", "directorio", "accionista", "dividendo", "fusión",
+        "adquisición", "joint venture", "gobierno corporativo"
+    ]
+    
+    labor_terms = [
+        "laboral", "trabajo", "empleado", "trabajador", "sindicato",
+        "contrato", "despido", "liquidación", "prestaciones",
+        "stps", "imss", "infonavit", "fonacot"
+    ]
+    
+    tax_terms = [
+        "fiscal", "tributario", "impuesto", "deducción", "isr", "iva",
+        "ieps", "sat", "cff", "lisr", "liva", "declaración"
+    ]
+    
+    data_privacy_terms = [
+        "privacidad", "protección", "datos", "personales", "inai",
+        "avisos", "consentimiento", "transferencia", "arco", "gdpr"
+    ]
+    
+    environmental_terms = [
+        "ambiental", "ecológico", "emisiones", "residuos", "impacto",
+        "semarnat", "profepa", "asea", "eia", "mia"
+    ]
+    
+    # Detectar dominio específico
+    has_financial = any(term in query_lower for term in financial_terms)
+    has_corporate = any(term in query_lower for term in corporate_terms)
+    has_labor = any(term in query_lower for term in labor_terms)
+    has_tax = any(term in query_lower for term in tax_terms)
+    has_privacy = any(term in query_lower for term in data_privacy_terms)
+    has_environmental = any(term in query_lower for term in environmental_terms)
+    has_legal_technical = any(term in query_lower for term in legal_technical_terms)
+    
+    # === ANÁLISIS DE TIPO DE CONSULTA ===
+    
+    # Consultas de interpretación (necesitan más análisis semántico)
+    interpretation_indicators = [
+        "qué significa", "cómo interpretar", "qué implica", "alcance de",
+        "criterio", "interpretación", "análisis", "opinión", "considera",
+        "aplicable", "aplica", "abarca", "incluye", "comprende"
+    ]
+    is_interpretation = any(indicator in query_lower for indicator in interpretation_indicators)
+    
+    # Consultas específicas de artículo/norma (necesitan coincidencia exacta)
+    specific_article_indicators = [
+        "artículo", "art.", "art ", "inciso", "fracción", "párrafo",
+        "capítulo", "cap.", "cap ", "título", "sección", "anexo"
+    ]
+    seeks_specific_article = any(indicator in query_lower for indicator in specific_article_indicators)
+    
+    # Referencias jurisdiccionales/geográficas
+    jurisdiction_indicators = [
+        "federal", "estatal", "local", "municipal", "cdmx", "ciudad de méxico",
+        "estados unidos", "méxico", "europeo", "internacional", "nacional"
+    ]
+    has_jurisdiction = any(indicator in query_lower for indicator in jurisdiction_indicators)
+    
+    # Referencias temporales
+    temporal_indicators = [
+        "2024", "2025", "2023", "actual", "vigente", "nuevo", "nueva",
+        "reciente", "último", "actualizado", "modificación", "reforma",
+        "derogado", "abrogado", "anterior", "previo"
+    ]
+    has_temporal_reference = any(indicator in query_lower for indicator in temporal_indicators)
+    
+    # Complejidad de la consulta
     query_length = len(query.split())
-    has_technical_terms = any(term in query.lower() for term in [
-        "visa", "mastercard", "tarifa", "tasa", "comisión", "fee", "interchange", 
-        "adquirente", "emisor", "transacción", "regulatorio", "normativa", "red"
-    ])
     
-    # Consultas específicas vs. generales
-    specific_indicators = ["específico", "exacto", "concreto", "específicamente", "detalle", "2024", "2025"]
-    is_specific = any(indicator in query.lower() for indicator in specific_indicators)
+    # === AJUSTE DE PESOS SEGÚN ANÁLISIS ===
     
-    # Ajustar pesos según características de la consulta
-    if is_specific:
-        # Para consultas específicas, priorizar coincidencia léxica (BM25)
-        weights["bm25"] = 0.45
+    # 1. Consultas que buscan artículo/norma específica
+    if seeks_specific_article:
+        weights["bm25"] = 0.50  # Alta prioridad a coincidencias exactas
         weights["cosine"] = 0.25
+        weights["llm"] = 0.25
+    
+    # 2. Consultas de interpretación legal
+    elif is_interpretation:
+        weights["bm25"] = 0.20  # Baja prioridad a coincidencias exactas
+        weights["cosine"] = 0.30
+        weights["llm"] = 0.50  # Alta prioridad a análisis semántico
+    
+    # 3. Consultas con dominio específico muy técnico
+    elif has_financial or has_tax or has_privacy:
+        weights["bm25"] = 0.40  # Términos técnicos exactos importantes
+        weights["cosine"] = 0.30
         weights["llm"] = 0.30
-    elif has_technical_terms:
-        # Para consultas con términos técnicos, balance entre léxico y semántico
+    
+    # 4. Consultas con términos legales técnicos generales
+    elif has_legal_technical:
         weights["bm25"] = 0.35
         weights["cosine"] = 0.35
         weights["llm"] = 0.30
+    
+    # 5. Consultas muy cortas (pocas palabras)
     elif query_length <= 3:
-        # Para consultas muy cortas, priorizar la evaluación semántica
         weights["bm25"] = 0.25
         weights["cosine"] = 0.30
-        weights["llm"] = 0.45
-    elif query_length >= 15:
-        # Para consultas muy largas, dar más peso a LLM
+        weights["llm"] = 0.45  # Necesita más interpretación
+    
+    # 6. Consultas muy largas y complejas
+    elif query_length >= 20:
         weights["bm25"] = 0.20
         weights["cosine"] = 0.25
-        weights["llm"] = 0.55
+        weights["llm"] = 0.55  # Necesita comprensión profunda
     
-    # Considerar también el contexto de tiempo si la consulta se refiere a fechas recientes
-    if any(term in query.lower() for term in ["2024", "2025", "reciente", "último", "nueva", "actualizado"]):
-        # Añadir un sesgo hacia contenido más reciente (esto debe implementarse en la lógica de los chunks)
-        # Por ahora, ajustamos los pesos para favorecer semántica sobre léxica
-        weights["bm25"] = max(0.2, weights["bm25"] - 0.1)
-        weights["llm"] = min(0.6, weights["llm"] + 0.1)
+    # === AJUSTES ESPECIALES ===
     
-    # Normalizar pesos para asegurar que sumen 1.0
+    # Ajuste por referencias temporales
+    if has_temporal_reference:
+        # Favor a evaluación semántica para contenido reciente
+        weights["bm25"] = max(0.15, weights["bm25"] - 0.10)
+        weights["llm"] = min(0.60, weights["llm"] + 0.10)
+    
+    # Ajuste por referencias jurisdiccionales
+    if has_jurisdiction:
+        # Favor a términos exactos para jurisdicciones específicas
+        weights["bm25"] = min(0.50, weights["bm25"] + 0.05)
+        weights["cosine"] = max(0.20, weights["cosine"] - 0.05)
+    
+    # Dominios que requieren precisión extrema (financiero, fiscal)
+    if has_financial or has_tax:
+        weights["bm25"] = min(0.55, weights["bm25"] + 0.05)
+    
+    # === NORMALIZACIÓN FINAL ===
     total = sum(weights.values())
     if total != 1.0:
         weights = {k: v / total for k, v in weights.items()}
     
     return weights
+
+
+# === FUNCIÓN AUXILIAR PARA DEBUG ===
+def explain_weight_adjustment(query: str, weights: Dict[str, float]) -> str:
+    """
+    Explica por qué se ajustaron los pesos de cierta manera.
+    Útil para debugging y logging.
+    """
+    query_lower = query.lower()
+    explanations = []
+    
+    # Detectar características de la consulta
+    if any(term in query_lower for term in ["artículo", "inciso", "fracción"]):
+        explanations.append("Busca artículo específico → Mayor peso a BM25")
+    
+    if any(term in query_lower for term in ["significa", "interpretar", "criterio"]):
+        explanations.append("Consulta de interpretación → Mayor peso a LLM")
+    
+    if any(term in query_lower for term in ["financiero", "fiscal", "visa", "mastercard"]):
+        explanations.append("Dominio técnico específico → Balance BM25/Coseno")
+    
+    if any(term in query_lower for term in ["2024", "2025", "reciente", "nuevo"]):
+        explanations.append("Referencia temporal → Mayor peso a LLM")
+    
+    if len(query.split()) <= 3:
+        explanations.append("Consulta muy corta → Mayor peso a LLM")
+    elif len(query.split()) >= 20:
+        explanations.append("Consulta muy compleja → Mayor peso a LLM")
+    
+    explanation = f"Pesos: BM25={weights['bm25']:.2f}, Coseno={weights['cosine']:.2f}, LLM={weights['llm']:.2f}"
+    if explanations:
+        explanation += f"\nRazones: {'; '.join(explanations)}"
+    
+    return explanation
+
+
 
 async def count_tokens(text: str, model: str = "gpt-3.5-turbo") -> int:
     """
@@ -825,6 +992,18 @@ async def rerank_chunks(
             logger.error(f"Fallback también falló: {fallback_error}")
             logger.info("Devolviendo chunks sin reordenar")
             return chunks
+
+
+
+
+
+
+
+
+
+
+
+
 
 # Mantener la función legada para compatibilidad
 async def rerank_chunks_with_llm(ctx: RunContext[Any], query: str, chunks: List[str], max_to_rerank: int = 15) -> List[str]:

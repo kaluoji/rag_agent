@@ -87,6 +87,8 @@ Agentes disponibles:
    - Experto en normativas y regulaciones de cualquier sector e industria
    - Ideal para consultas sobre regulaciones, obligaciones y procesos normativos
    - Puede generar informes relacionados con normas de cumplimiento
+   - INCLUYE capacidad de análisis GAP entre políticas internas y normativa aplicable
+   - Detecta automáticamente cuando se solicita análisis de brechas o evaluación de políticas
 
 3. REPORT
    - Especializado en generar reportes normativos formales en formato Word
@@ -100,11 +102,17 @@ Para cada consulta, debes determinar:
 3. Si el usuario está solicitando un reporte formal (usar REPORT) o solo información (usar COMPLIANCE)
 4. Qué agente principal debe responder la consulta
 
+IMPORTANTE para GAP Analysis:
+- Si la consulta menciona análisis de brechas, GAP analysis, evaluación de políticas, comparación con normativa, o análisis de cumplimiento de políticas internas, usa COMPLIANCE
+- El agente COMPLIANCE detectará automáticamente estos casos y usará las herramientas apropiadas
+- NO necesitas crear un agente separado para GAP analysis
+
 Tu respuesta debe ser un plan de orquestación que especifique la secuencia de agentes a utilizar y cualquier información relevante para su ejecución.
 
 Importante:
 No respondas directamente la consulta del usuario.
 Tu única función es planificar la coordinación entre los agentes especializados.
+
 """
 
 orchestrator_agent = Agent(

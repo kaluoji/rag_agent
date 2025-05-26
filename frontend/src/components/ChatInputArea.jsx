@@ -7,8 +7,9 @@ import {
   Tooltip
 } from '@mui/material';
 import SendIcon from '@mui/icons-material/Send';
+import AttachFileIcon from '@mui/icons-material/AttachFile';
 
-const ChatInputArea = ({ onSendMessage, isLoading }) => {
+const ChatInputArea = ({ onSendMessage, isLoading, onToggleDocuments, hasDocuments = false }) => {
   const [message, setMessage] = useState('');
   const [focused, setFocused] = useState(false);
   const textAreaRef = useRef(null);
@@ -123,6 +124,31 @@ const ChatInputArea = ({ onSendMessage, isLoading }) => {
               }
             }}
           />
+          
+          {/* Icono sutil para cargar documentos */}
+          <Tooltip title="Análisis GAP - Cargar documento" arrow placement="top">
+            <IconButton 
+              onClick={onToggleDocuments}
+              disabled={isLoading}
+              sx={{ 
+                p: '8px', // Mismo padding que el botón de enviar
+                m: '4px', // Mismo margin que el botón de enviar
+                color: hasDocuments ? '#4F062A' : 'rgba(0, 0, 0, 0.54)',
+                backgroundColor: hasDocuments ? 'rgba(79, 6, 42, 0.08)' : 'transparent',
+                transition: 'all 0.2s ease',
+                '&:hover': {
+                  backgroundColor: hasDocuments ? 'rgba(79, 6, 42, 0.12)' : 'rgba(0, 0, 0, 0.04)',
+                  color: '#4F062A'
+                },
+                '&.Mui-disabled': {
+                  color: 'action.disabled'
+                }
+              }}
+            >
+              <AttachFileIcon /> {/* Removido fontSize="small" para tamaño normal */}
+            </IconButton>
+          </Tooltip>
+          
           <Tooltip title="Enviar consulta" arrow placement="top">
             <span>
               <IconButton 

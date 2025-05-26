@@ -23,7 +23,7 @@ const MainPage = () => {
   } = useQueryStore();
 
   // Función para enviar consulta
-  const handleSubmitQuery = async (queryText, addResponseCallback) => {
+  const handleSubmitQuery = async (queryText, addResponseCallback, documents = null) => {
     if (!queryText.trim()) {
       setNotification({
         open: true,
@@ -39,7 +39,7 @@ const MainPage = () => {
       startLoading();
       
       // Enviar consulta al servicio
-      const data = await queryService.submitQuery(queryText);
+      const data = await queryService.submitQueryWithDocuments(queryText, documents);
       
       // Actualizar estado global con la respuesta
       setResponse(data);
@@ -50,9 +50,14 @@ const MainPage = () => {
         addResponseCallback(responseText);
       }
       
+      // Mensaje de éxito diferente si hay documentos
+      const successMessage = documents && documents.length > 0 ? 
+        'Análisis GAP completado correctamente' : 
+        'Consulta procesada correctamente';
+
       setNotification({
         open: true,
-        message: 'Consulta procesada correctamente',
+        message: successMessage,
         severity: 'success'
       });
     } catch (error) {

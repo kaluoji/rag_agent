@@ -11,13 +11,23 @@ import {
   Fade,
   Zoom,
   IconButton,
+  Collapse,
+  Chip,
+  Button,
   Tooltip
 } from '@mui/material';
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import rehypeRaw from 'rehype-raw';
 import ChatInputArea from './ChatInputArea';
 import DocxPreviewPanel from './DocxPreviewPanel';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import DescriptionIcon from '@mui/icons-material/Description';
+import DocumentUploader from './DocumentUploader';
+import AttachFileIcon from '@mui/icons-material/AttachFile';
+import AnalyticsIcon from '@mui/icons-material/Analytics';
+import DeleteIcon from '@mui/icons-material/Delete';
+
 
 // Importamos la imagen del avatar del agente
 import agentAvatar from '../assets/a.png';
@@ -157,10 +167,56 @@ const ChatMessage = ({ message, isUser, onViewReport }) => {
                 fontWeight: 500,
                 borderRadius: '3px'
               },
+
+              // Estilos específicos para tablas
+              '& table': {
+                width: '100%',
+                borderCollapse: 'collapse',
+                margin: '16px 0',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                overflow: 'hidden',
+                borderRadius: '8px'
+              },
+              '& thead': {
+                backgroundColor: '#4F062A',
+                color: 'white'
+              },
+              '& th': {
+                padding: '12px 16px',
+                textAlign: 'left',
+                fontWeight: 600,
+                fontSize: '0.9rem',
+                borderBottom: 'none'
+              },
+              '& td': {
+                padding: '12px 16px',
+                borderBottom: '1px solid #e0e0e0',
+                fontSize: '0.9rem',
+                verticalAlign: 'top'
+              },
+              '& tbody tr': {
+                backgroundColor: '#fff',
+                transition: 'background-color 0.2s ease',
+                '&:hover': {
+                  backgroundColor: '#f9f9f9'
+                },
+                '&:last-child td': {
+                  borderBottom: 'none'
+                }
+              },
+              '& tbody tr:nth-of-type(even)': {
+                backgroundColor: '#f8f9fa'
+              },
+    
               position: 'relative', // Para el botón de previsualización
             }}
           >
-            <ReactMarkdown>{message}</ReactMarkdown>
+            <ReactMarkdown 
+              remarkPlugins={[remarkGfm]}
+              rehypePlugins={[rehypeRaw]}
+            >
+              {message}
+            </ReactMarkdown>
             
             {/* Botón para previsualizar informe si existe */}
             {reportInfo && (
@@ -203,6 +259,9 @@ const ChatInterface = ({ onSubmitQuery, isLoading }) => {
   const [chatHistory, setChatHistory] = useState([]);
   const messagesEndRef = useRef(null);
   const messageContainerRef = useRef(null);
+  const [showDocumentUploader, setShowDocumentUploader] = useState(false);
+  const [uploadedDocuments, setUploadedDocuments] = useState([]);
+  const [isGapAnalysisMode, setIsGapAnalysisMode] = useState(false);
   
   // Estado para controlar las animaciones
   const [showWelcome, setShowWelcome] = useState(false);
@@ -248,6 +307,127 @@ const ChatInterface = ({ onSubmitQuery, isLoading }) => {
   const handleClosePreview = () => {
     setPreviewOpen(false);
   };
+
+  // Función para manejar la selección directa de archivos
+  const handleDirectFileSelection = async (file) => {
+    // Validar el archivo
+    const maxSize = 10 * 1024 * 1024; // 10MB
+    const allowedTypes = ['.pdf', '.docx', '.txt'];
+    
+    if (file.size > maxSize) {
+      alert('El archivo es demasiado grande. Máximo 10MB.');
+      return;
+    }
+    
+    const extension = '.' + file.name.split('.').pop().toLowerCase();
+    if (!allowedTypes.includes(extension)) {
+      alert(`Tipo de archivo no permitido. Tipos válidos: ${allowedTypes.join(', ')}`);
+      return;
+    }
+
+    // Crear objeto de archivo compatible con el sistema existente
+    const fileObject = {
+      id: Date.now() + Math.random(),
+      file: file,
+      name: file.name,
+      size: file.size,
+      type: file.type,
+      uploadedAt: new Date()
+    };
+    
+    // Actualizar el estado
+    setUploadedDocuments([fileObject]);
+    setIsGapAnalysisMode(true);
+    setShowDocumentUploader(true); // Mostrar el área compacta de confirmación
+  };
+
+  const handleToggleDocumentUploader = () => {
+    // Si ya hay documentos cargados, alternar la vista
+    if (uploadedDocuments.length > 0) {
+      setShowDocumentUploader(!showDocumentUploader);
+      setIsGapAnalysisMode(!isGapAnalysisMode);
+      
+      // Si estamos cerrando el uploader, limpiar documentos
+      if (showDocumentUploader) {
+        setUploadedDocuments([]);
+      }
+    } else {
+      // Si no hay documentos, abrir directamente el selector de archivos
+      const fileInput = document.createElement('input');
+      fileInput.type = 'file';
+      fileInput.accept = '.pdf,.docx,.txt';
+      fileInput.onchange = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+          handleDirectFileSelection(file);
+        }
+      };
+      fileInput.click();
+    }
+  };
+
+  const handleFilesChange = (files) => {
+    setUploadedDocuments(files);
+  };
+
+  const handleSubmitWithDocuments = async (message) => {
+    if (isGapAnalysisMode && uploadedDocuments.length === 0) {
+      // Mostrar mensaje de error si no hay documentos cargados
+      alert('Por favor, carga al menos un documento para realizar el análisis GAP');
+      return;
+    }
+    
+    // Procesar los archivos a base64 si hay documentos cargados
+    let documentsData = null;
+    
+    if (uploadedDocuments.length > 0) {
+      documentsData = await Promise.all(
+        uploadedDocuments.map(async (fileObj) => {
+          return new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+              resolve({
+                name: fileObj.name,
+                type: fileObj.type,
+                content: e.target.result.split(',')[1], // Remover el prefijo data:...base64,
+                size: fileObj.size
+              });
+            };
+            reader.readAsDataURL(fileObj.file);
+          });
+        })
+      );
+    }
+    
+    // Construir el mensaje enriquecido para GAP analysis
+    let enrichedMessage = message;
+    
+    if (isGapAnalysisMode && documentsData) {
+      enrichedMessage = `Realiza un análisis GAP del siguiente documento: ${documentsData[0].name}
+
+Política a evaluar:
+[DOCUMENTO_CARGADO: ${documentsData[0].name}]
+
+Consulta específica: ${message}`;
+    }
+    
+    // Agregar consulta del usuario al historial (mensaje original, no enriquecido)
+    setChatHistory(prevHistory => [
+      ...prevHistory,
+      { isUser: true, text: message, hasDocuments: uploadedDocuments.length > 0 }
+    ]);
+    
+    // Enviar consulta al componente padre con los documentos
+    onSubmitQuery(enrichedMessage, addResponseToChat, documentsData);
+    
+    // Limpiar el modo GAP analysis después del envío
+    if (isGapAnalysisMode) {
+      setShowDocumentUploader(false);
+      setIsGapAnalysisMode(false);
+      setUploadedDocuments([]);
+    }
+  };
+
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
@@ -411,20 +591,51 @@ const ChatInterface = ({ onSubmitQuery, isLoading }) => {
         <div ref={messagesEndRef} />
       </Box>
       
+      {/* Área de confirmación de documento cargado - compacta */}
+      <Collapse in={showDocumentUploader && uploadedDocuments.length > 0}>
+        <Box sx={{ 
+          p: 2, 
+          borderTop: '1px solid rgba(0,0,0,0.1)',
+          backgroundColor: 'rgba(79, 6, 42, 0.02)'
+        }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+              <AnalyticsIcon sx={{ mr: 1, fontSize: '1.2rem', color: '#4F062A' }} />
+              <Box>
+                <Typography variant="subtitle2" sx={{ 
+                  color: '#4F062A',
+                  fontWeight: 600,
+                  lineHeight: 1.2
+                }}>
+                  Análisis GAP activado
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  {uploadedDocuments[0]?.name} cargado correctamente
+                </Typography>
+              </Box>
+            </Box>
+            <IconButton
+              size="small"
+              onClick={() => {
+                setUploadedDocuments([]);
+                setIsGapAnalysisMode(false);
+                setShowDocumentUploader(false);
+              }}
+              sx={{ color: 'text.secondary' }}
+            >
+              <DeleteIcon fontSize="small" />
+            </IconButton>
+          </Box>
+        </Box>
+      </Collapse>
+
       {/* Área de entrada - fijada en la parte inferior */}
       <Box sx={{ flexShrink: 0 }}>
         <ChatInputArea 
-          onSendMessage={(message) => {
-            // Agregar consulta del usuario al historial
-            setChatHistory(prevHistory => [
-              ...prevHistory,
-              { isUser: true, text: message }
-            ]);
-            
-            // Enviar consulta al componente padre
-            onSubmitQuery(message, addResponseToChat);
-          }}
+          onSendMessage={handleSubmitWithDocuments}
           isLoading={isLoading}
+          onToggleDocuments={handleToggleDocumentUploader}
+          hasDocuments={uploadedDocuments.length > 0}
         />
       </Box>
       

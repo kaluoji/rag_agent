@@ -17,6 +17,8 @@ import logging
 import numpy as np
 from sklearn.cluster import KMeans
 from sklearn.metrics.pairwise import cosine_similarity
+from sklearn.cluster import AgglomerativeClustering
+from sklearn.metrics import silhouette_score
 import re
 import tempfile
 from pathlib import Path
@@ -264,7 +266,7 @@ def clean_headers_footers(content, document_title=None):
 
 async def semantic_chunk_text(text: str, chunk_size: int = 1500, min_chunk_size: int = 100, max_chunks: int = 100, overlap_size: int = 75, is_regulatory: bool = True) -> List[Dict]:
     """
-    Divide el texto en fragmentos semánticamente coherentes usando clustering.
+    Divide el texto en fragmentos semánticamente coherentes usando clustering mejorado.
     Para textos normativos, realiza una división precisa basada en artículos individuales.
     Incluye superposición entre chunks para mantener contexto.
     
@@ -279,7 +281,7 @@ async def semantic_chunk_text(text: str, chunk_size: int = 1500, min_chunk_size:
     Returns:
         Lista de chunks con metadatos de clustering
     """
-    # Para documentos normativos, usar detección de artículos
+    # Para documentos normativos, usar detección de artículos (mantener código original completo)
     if is_regulatory:
         # Paso 1: Identificar los artículos en el texto mediante patrones regulares más precisos
         article_patterns = [
@@ -568,125 +570,290 @@ async def semantic_chunk_text(text: str, chunk_size: int = 1500, min_chunk_size:
                         "is_subdivision": False
                     })
             
-            # Detectar referencias cruzadas entre artículos
-            #for chunk in final_chunks_with_metadata:
-            #    content = chunk["text"]
-            #    article_refs = []
-                
-            #    # Patrones para identificar referencias a otros artículos
-            #    ref_patterns = [
-            #        r'(?i)art(?:ículo|iculo|\.)\s+(\d+[a-z]?)',
-            #        r'(?i)conforme\s+(?:al|a\s+lo\s+dispuesto\s+en\s+el)\s+art(?:ículo|iculo|\.)\s+(\d+[a-z]?)',
-            #        r'(?i)de\s+acuerdo\s+(?:con|a)\s+(?:el\s+)?art(?:ículo|iculo|\.)\s+(\d+[a-z]?)',
-            #        r'(?i)según\s+(?:el\s+)?art(?:ículo|iculo|\.)\s+(\d+[a-z]?)'
-            #    ]
-                
-            #    for pattern in ref_patterns:
-            #        for match in re.finditer(pattern, content):
-            #            ref_num = match.group(1)
-            #            # Evitar autoreferencias y duplicados
-            #            if ref_num != chunk.get("article_number") and ref_num not in article_refs:
-            #                article_refs.append(ref_num)
-                
-            #    chunk["article_references"] = article_refs
-            
             return final_chunks_with_metadata
     
-    # Código original para textos no normativos o fallback
-    # Paso 1: División inicial en párrafos como unidades básicas
+    # CÓDIGO SIMPLIFICADO PARA TEXTOS NO NORMATIVOS
+    # Paso 1: Preparación inicial (igual que antes)
     paragraphs = [p.strip() for p in text.split('\n\n') if p.strip()]
     if not paragraphs:
         return []
     
-    # Para textos muy cortos, usamos el método simple
+    # Para textos muy cortos, usar método simple
     if len(text) < chunk_size * 2:
         return [{"text": chunk, "cluster_id": -1, "cluster_size": 1} for chunk in chunk_text(text, chunk_size)]
     
-    # Paso 2: Obtener embeddings para cada párrafo
+    # Paso 2: Obtener embeddings
     batch_size = 20
     all_embeddings = await batch_get_embeddings(paragraphs, batch_size)
-    
-    # Convertir a array de numpy para clustering
     embeddings_array = np.array(all_embeddings)
     
-    # Paso 3: Clustering
-    num_clusters = min(max(len(paragraphs) // 3, 2), max_chunks)
-    kmeans = KMeans(n_clusters=num_clusters, random_state=42)
-    cluster_labels = kmeans.fit_predict(embeddings_array)
+    # Paso 3: CLUSTERING JERÁRQUICO ADAPTATIVO
+    # Este enfoque es fundamentalmente diferente y más efectivo
     
-    # Paso 4: Agrupar párrafos por cluster
+    # Calcular el número objetivo de chunks finales basado en tamaño de contenido
+    total_text_length = sum(len(p) for p in paragraphs)
+    target_num_chunks = max(2, min(total_text_length // chunk_size, max_chunks // 2))
+    
+    # Usar clustering jerárquico que encuentra automáticamente el número óptimo
+    optimal_clusters = find_optimal_cluster_count_hierarchical(
+        embeddings_array, 
+        min_clusters=2, 
+        max_clusters=min(target_num_chunks, len(paragraphs) // 3),
+        target_chunk_size=chunk_size,
+        paragraphs=paragraphs
+    )
+    
+    # Aplicar clustering jerárquico con el número óptimo
+    hierarchical_clustering = AgglomerativeClustering(
+        n_clusters=optimal_clusters,
+        linkage='ward',  # Minimiza la varianza intra-cluster
+        metric='euclidean'
+    )
+    
+    cluster_labels = hierarchical_clustering.fit_predict(embeddings_array)
+    
+    # Paso 4: Post-procesamiento para consolidar clusters pequeños
+    cluster_labels = consolidate_small_clusters(cluster_labels, paragraphs, min_chunk_size)
+    
+    # Paso 5: Crear clusters finales
     clusters = {}
     for i, label in enumerate(cluster_labels):
         if label not in clusters:
             clusters[label] = []
         clusters[label].append((i, paragraphs[i]))
     
-    # Paso 5: Crear chunks finales con superposición
+    # Paso 6: Generar chunks finales con overlap mejorado
     final_chunks_with_metadata = []
     
     for label, items in clusters.items():
-        # Ordenamos los párrafos por su posición original
+        # Ordenar por posición original para mantener flujo narrativo
         items.sort(key=lambda x: x[0])
         
-        # Crear chunks dentro de este cluster
-        current_chunk = ""
-        previous_paragraphs = []  # Almacenar los últimos párrafos para overlap
-        overlap_text = ""
+        # Crear chunks adaptativos dentro del cluster
+        cluster_chunks = create_balanced_chunks_from_cluster(items, chunk_size, min_chunk_size, overlap_size)
         
-        for _, paragraph in items:
-            # Si añadir este párrafo excede el tamaño y ya tenemos contenido suficiente
-            if len(current_chunk) + len(paragraph) > chunk_size and len(current_chunk) >= min_chunk_size:
-                # Guardar el chunk actual
-                final_chunks_with_metadata.append({
-                    "text": current_chunk.strip(),
-                    "cluster_id": int(label),
-                    "cluster_size": len(items),
-                    "has_overlap": len(overlap_text) > 0
-                })
-                
-                # Crear overlap para el siguiente chunk
-                overlap_text = ""
-                # Tomar los últimos párrafos hasta alcanzar approximate_overlap_size
-                total_len = 0
-                for p in reversed(previous_paragraphs):
-                    if total_len + len(p) <= overlap_size:
-                        overlap_text = p + "\n\n" + overlap_text
-                        total_len += len(p) + 4  # +4 para \n\n
-                    else:
-                        # Si el párrafo es demasiado grande, tomar solo el final
-                        if total_len == 0:  # Si es el primer párrafo y ya es grande
-                            overlap_size_for_this_p = min(overlap_size, len(p))
-                            overlap_text = p[-overlap_size_for_this_p:] + "\n\n" + overlap_text
-                        break
-                
-                # Empezar nuevo chunk con el overlap
-                current_chunk = overlap_text + paragraph
-                previous_paragraphs = [paragraph]
-            else:
-                if current_chunk:
-                    current_chunk += "\n\n" + paragraph
-                else:
-                    current_chunk = paragraph
-                previous_paragraphs.append(paragraph)
-                # Mantener solo los últimos N párrafos para el overlap
-                if len(previous_paragraphs) > 5:  # Ajustar según tus necesidades
-                    previous_paragraphs = previous_paragraphs[-5:]
-        
-        # Añadir el último chunk si tiene contenido
-        if current_chunk and len(current_chunk) >= min_chunk_size:
+        for chunk_idx, chunk_text in enumerate(cluster_chunks):
             final_chunks_with_metadata.append({
-                "text": current_chunk.strip(),
+                "text": chunk_text.strip(),
                 "cluster_id": int(label),
                 "cluster_size": len(items),
-                "has_overlap": len(overlap_text) > 0
+                "has_overlap": chunk_idx > 0,
+                "chunk_in_cluster": chunk_idx,
+                "clustering_method": "hierarchical_consolidated"
             })
     
-    # Fallback si no se crearon chunks válidos
-    if not final_chunks_with_metadata:
-        return [{"text": chunk, "cluster_id": -1, "cluster_size": 1, "has_overlap": False} 
-                for chunk in chunk_text(text, chunk_size)]
+    # Validación final
+    logging.info(f"Clustering jerárquico completado: {len(clusters)} clusters para {len(paragraphs)} párrafos")
+    logging.info(f"Distribución de chunks por cluster: {[len(items) for items in clusters.values()]}")
     
     return final_chunks_with_metadata
+
+
+def find_optimal_cluster_count_hierarchical(embeddings_array, min_clusters, max_clusters, target_chunk_size, paragraphs):
+    """
+    Encuentra el número óptimo de clusters usando múltiples métricas de calidad.
+    """
+    best_score = -1
+    best_num_clusters = min_clusters
+    
+    for num_clusters in range(min_clusters, max_clusters + 1):
+        try:
+            # Probar clustering con este número de clusters
+            clustering = AgglomerativeClustering(n_clusters=num_clusters, linkage='ward')
+            labels = clustering.fit_predict(embeddings_array)
+            
+            # Calcular múltiples métricas de calidad
+            silhouette_avg = silhouette_score(embeddings_array, labels)
+            
+            # Penalizar clusters que resulten en chunks demasiado pequeños o grandes
+            cluster_sizes = []
+            for cluster_id in range(num_clusters):
+                cluster_paragraphs = [paragraphs[i] for i, label in enumerate(labels) if label == cluster_id]
+                cluster_text_size = sum(len(p) for p in cluster_paragraphs)
+                cluster_sizes.append(cluster_text_size)
+            
+            # Penalizar desviaciones extremas del tamaño objetivo
+            size_penalty = 0
+            for size in cluster_sizes:
+                if size < target_chunk_size * 0.3:  # Muy pequeño
+                    size_penalty += 0.3
+                elif size > target_chunk_size * 2.0:  # Muy grande
+                    size_penalty += 0.2
+            
+            # Score compuesto que balancea cohesión semántica y tamaño apropiado
+            composite_score = silhouette_avg - size_penalty
+            
+            if composite_score > best_score:
+                best_score = composite_score
+                best_num_clusters = num_clusters
+                
+        except ValueError:
+            # Si falla con este número de clusters, continuar
+            continue
+    
+    logging.info(f"Número óptimo de clusters encontrado: {best_num_clusters} (score: {best_score:.3f})")
+    return best_num_clusters
+
+
+def consolidate_small_clusters(cluster_labels, paragraphs, min_chunk_size):
+    """
+    Consolida clusters que resultan en chunks demasiado pequeños fusionándolos con clusters vecinos.
+    """
+    # Calcular tamaño de cada cluster
+    cluster_sizes = {}
+    for i, label in enumerate(cluster_labels):
+        if label not in cluster_sizes:
+            cluster_sizes[label] = 0
+        cluster_sizes[label] += len(paragraphs[i])
+    
+    # Identificar clusters que necesitan consolidación
+    small_clusters = [label for label, size in cluster_sizes.items() if size < min_chunk_size]
+    
+    # Fusionar clusters pequeños con sus vecinos más similares
+    for small_cluster in small_clusters:
+        # Encontrar el cluster más similar (basado en posición en el documento)
+        small_cluster_positions = [i for i, label in enumerate(cluster_labels) if label == small_cluster]
+        
+        if not small_cluster_positions:
+            continue
+            
+        # Buscar cluster vecino más apropiado
+        avg_position = sum(small_cluster_positions) / len(small_cluster_positions)
+        
+        best_target_cluster = None
+        min_distance = float('inf')
+        
+        for target_cluster in set(cluster_labels):
+            if target_cluster == small_cluster:
+                continue
+                
+            target_positions = [i for i, label in enumerate(cluster_labels) if label == target_cluster]
+            if target_positions:
+                target_avg_position = sum(target_positions) / len(target_positions)
+                distance = abs(avg_position - target_avg_position)
+                
+                if distance < min_distance:
+                    min_distance = distance
+                    best_target_cluster = target_cluster
+        
+        # Fusionar con el cluster más cercano
+        if best_target_cluster is not None:
+            for i in range(len(cluster_labels)):
+                if cluster_labels[i] == small_cluster:
+                    cluster_labels[i] = best_target_cluster
+    
+    return cluster_labels
+
+
+def create_balanced_chunks_from_cluster(items, chunk_size, min_chunk_size, overlap_size):
+    """
+    Crea chunks balanceados desde un cluster, evitando chunks extremadamente pequeños o grandes.
+    """
+    chunks = []
+    current_chunk = ""
+    overlap_text = ""
+    
+    for idx, (original_pos, paragraph) in enumerate(items):
+        # Construir chunk potencial
+        if current_chunk:
+            potential_chunk = current_chunk + "\n\n" + paragraph
+        else:
+            potential_chunk = overlap_text + paragraph if overlap_text else paragraph
+        
+        # Lógica más inteligente para decidir cuándo cerrar un chunk
+        should_close = False
+        
+        # Condición 1: Tamaño excedido significativamente
+        if len(potential_chunk) > chunk_size * 1.3 and len(current_chunk) >= min_chunk_size:
+            should_close = True
+        
+        # Condición 2: Cerca del final del cluster y tenemos contenido suficiente
+        elif idx == len(items) - 1 and len(current_chunk) >= min_chunk_size * 0.7:
+            # No cerrar aquí, incluir el último párrafo
+            current_chunk = potential_chunk
+            break
+        
+        # Condición 3: Punto de división natural (si detectamos un cambio temático)
+        elif (len(current_chunk) >= min_chunk_size and 
+              idx < len(items) - 2 and  # No cerca del final
+              detect_natural_break_point(current_chunk, paragraph)):
+            should_close = True
+        
+        if should_close:
+            # Guardar chunk actual
+            final_chunk = overlap_text + current_chunk if overlap_text else current_chunk
+            chunks.append(final_chunk.strip())
+            
+            # Crear overlap inteligente
+            overlap_text = create_smart_overlap_from_text(current_chunk, overlap_size)
+            current_chunk = paragraph
+        else:
+            current_chunk = potential_chunk if not overlap_text else current_chunk + "\n\n" + paragraph
+            overlap_text = ""
+    
+    # Añadir el último chunk
+    if current_chunk and len(current_chunk) >= min_chunk_size * 0.5:
+        final_chunk = overlap_text + current_chunk if overlap_text else current_chunk
+        chunks.append(final_chunk.strip())
+    elif chunks and current_chunk:
+        # Si el último fragmento es muy pequeño, fusionar con el anterior
+        chunks[-1] += "\n\n" + current_chunk
+    
+    return chunks
+
+
+def detect_natural_break_point(current_text, next_paragraph):
+    """
+    Detecta puntos naturales de división basándose en indicadores textuales.
+    """
+    # Indicadores de conclusión o transición
+    conclusion_indicators = [
+        'por tanto', 'en conclusión', 'finalmente', 'en resumen', 'así pues',
+        'por consiguiente', 'en definitiva', 'para concluir'
+    ]
+    
+    transition_indicators = [
+        'sin embargo', 'no obstante', 'por otro lado', 'mientras tanto',
+        'por el contrario', 'a diferencia de', 'en contraste'
+    ]
+    
+    current_lower = current_text.lower()
+    next_lower = next_paragraph.lower()
+    
+    # Si el párrafo actual termina con indicadores de conclusión
+    current_ends_conclusively = any(indicator in current_lower[-100:] for indicator in conclusion_indicators)
+    
+    # Si el siguiente párrafo comienza con indicadores de transición
+    next_starts_transitionally = any(next_lower.startswith(indicator) for indicator in transition_indicators)
+    
+    return current_ends_conclusively or next_starts_transitionally
+
+
+def create_smart_overlap_from_text(text, overlap_size):
+    """
+    Crea overlap preservando oraciones completas y contexto semántico.
+    """
+    if len(text) <= overlap_size:
+        return text + "\n\n"
+    
+    # Dividir en oraciones
+    sentences = re.split(r'(?<=[.!?])\s+', text)
+    
+    # Seleccionar oraciones del final
+    selected = []
+    current_length = 0
+    
+    for sentence in reversed(sentences):
+        if current_length + len(sentence) <= overlap_size:
+            selected.insert(0, sentence)
+            current_length += len(sentence) + 1
+        else:
+            break
+    
+    if not selected:
+        return text[-overlap_size:] + "\n\n"
+    
+    return " ".join(selected) + "\n\n"
 
 def chunk_text(text: str, chunk_size: int = 800) -> List[str]:
     """
@@ -1174,42 +1341,72 @@ async def insert_or_update_document(document_metadata: Dict[str, Any]) -> int:
 async def process_chunk(chunk_with_metadata: Dict, chunk_number: int, identifier: str, document_id: int, document_metadata: Dict) -> ProcessedChunk:
     """
     Procesa un fragmento de texto con su metadata de cluster e información del documento.
+    Genera embeddings enriquecidos que incluyen contexto del documento y metadatos relevantes
+    para mejorar la precisión de recuperación en el sistema RAG.
     """
     # Extraer el texto y la información del cluster
     chunk_text = chunk_with_metadata["text"] if isinstance(chunk_with_metadata, dict) else chunk_with_metadata
     cluster_id = chunk_with_metadata.get("cluster_id", -1) if isinstance(chunk_with_metadata, dict) else -1
     cluster_size = chunk_with_metadata.get("cluster_size", 1) if isinstance(chunk_with_metadata, dict) else 1
-    #article_references = chunk_with_metadata.get("references", []) if isinstance(chunk_with_metadata, dict) else []
     
     # Si el chunk ya tiene información de artículo, usarla
     article_number = chunk_with_metadata.get("article_number") if isinstance(chunk_with_metadata, dict) else None
     article_title = chunk_with_metadata.get("article_title") if isinstance(chunk_with_metadata, dict) else None
     
-    # Lanzar las dos tareas sin esperar
-    extracted_task = asyncio.create_task(get_title_and_summary(chunk_text, identifier))
-    # placeholder para summary no usado aquí
-    
-    # Esperar extracción antes de preparar el embedding
-    extracted = await extracted_task
+    # Paso 1: Extraer título y resumen del chunk
+    extracted = await get_title_and_summary(chunk_text, identifier)
     summary = extracted.get('summary', '')
-
-    # Ahora construyes el input enriquecido
-    embedding_input = f"{summary}\n\n{chunk_text}"
-    embedding_task  = asyncio.create_task(get_embedding(embedding_input))
-
-    # Esperar embedding
-    embedding = await embedding_task
     
-    # Obtener metadata simple sin llamadas a API
+    # Paso 2: Construir input enriquecido para embedding
+    # Este es el cambio clave que mejora significativamente la calidad del embedding
+    embedding_components = []
+    
+    # Añadir contexto del documento (información más importante para RAG)
+    if document_metadata.get('document_title'):
+        embedding_components.append(f"Documento: {document_metadata['document_title']}")
+    
+    if document_metadata.get('issuing_authority'):
+        embedding_components.append(f"Autoridad emisora: {document_metadata['issuing_authority']}")
+    
+    if document_metadata.get('document_type'):
+        embedding_components.append(f"Tipo de documento: {document_metadata['document_type']}")
+    
+    if document_metadata.get('jurisdiction'):
+        embedding_components.append(f"Jurisdicción: {document_metadata['jurisdiction']}")
+    
+    # Añadir contexto específico del chunk
+    if summary:
+        embedding_components.append(f"Contexto del fragmento: {summary}")
+    
+    # Añadir información de artículo si existe (muy valioso para documentos normativos)
+    if article_number:
+        embedding_components.append(f"Artículo: {article_number}")
+    
+    if article_title:
+        embedding_components.append(f"Título del artículo: {article_title}")
+    
+    # Construir el input final para embedding con estructura clara
+    context_prefix = "\n".join(embedding_components)
+    
+    # Formato estructurado que el modelo de embedding puede interpretar mejor
+    enriched_input = f"""{context_prefix}
+
+Contenido del fragmento:
+{chunk_text}"""
+    
+    # Paso 3: Generar embedding con el input enriquecido
+    # Este embedding ahora incluye contexto documental y metadatos relevantes
+    embedding = await get_embedding(enriched_input)
+    
+    # Paso 4: Obtener metadatos adicionales (manteniendo tu lógica existente)
     date = extract_date_from_url(identifier)
-    summary = extracted.get('summary', '')
     source = await get_source(identifier)
     
-    # Obtener categoría y keywords secuencialmente
+    # Obtener categoría y keywords basándose en el resumen (más eficiente)
     category = await get_category(summary)
     keywords = await extract_keywords(summary)
     
-    # Construir metadata con información del documento
+    # Paso 5: Construir metadata completa con información del documento
     metadata = {
         # Metadatos del chunk
         "chunk_size": len(chunk_text),
@@ -1226,7 +1423,7 @@ async def process_chunk(chunk_with_metadata: Dict, chunk_number: int, identifier
         "article_number": article_number,
         "article_title": article_title,
         
-        # Incluir información básica del documento (duplicada por conveniencia en la metadata)
+        # Información del documento (duplicada por conveniencia en la metadata)
         "document_type": document_metadata.get("document_type"),
         "document_title": document_metadata.get("document_title"),
         "issuing_authority": document_metadata.get("issuing_authority"),
@@ -1234,21 +1431,24 @@ async def process_chunk(chunk_with_metadata: Dict, chunk_number: int, identifier
         "jurisdiction": document_metadata.get("jurisdiction"),
         "status": document_metadata.get("status"),
         "document_number": document_metadata.get("document_number"),
-        "official_source": document_metadata.get("official_source")
+        "official_source": document_metadata.get("official_source"),
+        
+        # Nuevo: indicar que este embedding incluye contexto enriquecido
+        "embedding_type": "enriched_with_context",
+        "embedding_components_count": len(embedding_components)
     }
     
     return ProcessedChunk(
         url=identifier,
         chunk_number=chunk_number,
         title=extracted.get('title', ''),
-        summary=extracted.get('summary', ''),
+        summary=summary,
         content=chunk_text,
         metadata=metadata,
         embedding=embedding,
-        #article_references=article_references,
-        document_id=document_id  # Añadir referencia al documento
+        document_id=document_id
     )
-
+    
 async def insert_chunk(chunk: ProcessedChunk):
     """
     Inserta el fragmento procesado en la tabla 'pd_mex' de Supabase.

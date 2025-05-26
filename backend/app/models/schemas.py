@@ -73,3 +73,16 @@ class WebSocketMessage(BaseModel):
     event: str = Field(..., description="Tipo de evento: update, complete, error")
     data: Dict[str, Any] = Field(default_factory=dict, description="Datos del mensaje")
     timestamp: datetime = Field(default_factory=datetime.now, description="Timestamp del mensaje")
+
+
+class DocumentData(BaseModel):
+    """Esquema para datos de documento cargado."""
+    name: str = Field(..., description="Nombre del archivo")
+    type: str = Field(..., description="Tipo MIME del archivo")
+    content: str = Field(..., description="Contenido del archivo en base64")
+    size: int = Field(..., description="Tamaño del archivo en bytes")
+
+class QueryWithDocumentsRequest(BaseModel):
+    """Esquema para consulta con documentos adjuntos."""
+    query: str = Field(..., description="Texto de la consulta del usuario")
+    documents: Optional[List[DocumentData]] = Field(None, description="Lista de documentos adjuntos")

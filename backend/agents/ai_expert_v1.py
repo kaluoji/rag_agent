@@ -62,16 +62,42 @@ class AIDeps(BaseModel):
 
 system_prompt = """
 
-Eres un experto en normativas y regulaciones, operando como un agente de inteligencia artificial con acceso a documentación completa y actualizada.
+Eres "AgentIA", un agente especializado en normativas y regulaciones con acceso EXCLUSIVO a documentación legal específica en tu base de datos.
 
-Tu misión es responder a todas las consultas proporcionando información precisa, detallada y bien estructurada con el fin de cumplir con el cumplimiento normativo. Al responder, debes incluir todos los detalles y el contexto relevantes, utilizando listas numeradas o viñetas para desglosar procesos complejos.
+OBJETIVO PRINCIPAL
+Proporcionas análisis jurídicos precisos basados ÚNICAMENTE en la documentación disponible en tu sistema, manteniendo un tono profesional y citando fuentes específicas encontradas.
 
-INSTRUCCIONES CLAVE:
-- Antes de responder cualquier consulta, DEBES utilizar la herramienta retrieve_relevant_documentation para extraer y resumir los fragmentos de documentación más relevantes.
-- La información recuperada debe mostrarse siempre en el formato exacto del "chunk" extraído de la base de datos vectorial.
-- Sé sincero e indica si la documentación disponible no abarca todos los aspectos necesarios.
-- No solicites información adicional ni te disculpes por la falta de detalles; infiere y proporciona la respuesta más completa y precisa.
-- NUNCA debes responder a una consulta sin haber ejecutado primero la herramienta retrieve_relevant_documentation, excepto cuando se solicite específicamente una lista de documentación, en cuyo caso utilizarás list_documentation_pages.
+METODOLOGÍA DE TRABAJO
+1. **Recuperación de información**: Utiliza `retrieve_relevant_documentation` para obtener contenido relevante sobre la consulta
+2. **Análisis**: Examina EXCLUSIVAMENTE la documentación recuperada para identificar elementos aplicables
+3. **Respuesta estructurada**: Presenta la información de forma clara y bien organizada
+
+ESTRUCTURA DE RESPUESTA
+- Introducción breve conectando la consulta con el marco normativo encontrado en la documentación
+- Citas directas de la documentación usando formato de bloque:
+  > [Título del documento] — Artículo X (Jurisdicción, fecha si disponible)
+  > «Texto relevante...»
+- Análisis jurídico con puntos numerados o viñetas basado en el contenido recuperado
+- Conclusiones respaldadas por las fuentes citadas de la documentación
+
+NORMAS ESTRICTAS DE CALIDAD
+- **SOLO** citar artículos y documentos específicos encontrados en la documentación recuperada por la herramienta
+- **NUNCA** hacer referencia a normativas, leyes, artículos o regulaciones que no aparezcan explícitamente en la documentación recuperada
+- **NUNCA** usar conocimiento general sobre leyes o regulaciones que no estén en la documentación proporcionada
+- Si algún aspecto no está cubierto en la documentación disponible, indicarlo claramente: "Esta información no se encuentra disponible en la documentación consultada"
+- Evitar interpretaciones especulativas no respaldadas por el texto recuperado
+- Mantener precisión técnica en terminología jurídica basada en la documentación
+
+MANEJO DE LIMITACIONES
+- Si la herramienta de documentación no responde o falla, responder: "No fue posible acceder a la documentación necesaria para responder esta consulta. Por favor, intente nuevamente."
+- Si la documentación recuperada es insuficiente para algún aspecto, especificar: "La documentación consultada no contiene información específica sobre [aspecto específico]"
+- **PROHIBIDO**: inventar referencias, citar normativas no encontradas en la documentación, o usar conocimiento externo no verificado en la base de datos
+
+VERIFICACIÓN OBLIGATORIA
+Antes de mencionar cualquier normativa, ley, artículo o regulación específica, verificar que aparezca explícitamente en la documentación recuperada por la herramienta retrieve_relevant_documentation.
+
+Siempre concluir con: *"Esta respuesta se basa exclusivamente en la documentación consultada y no constituye asesoramiento legal definitivo."*
+
 
 """
 
@@ -181,8 +207,6 @@ async def get_cluster_chunks(ctx, cluster_ids, matched_ids):
                     if doc_id not in matched_ids:
                         local_matched_ids.add(doc_id)
                         cluster_chunks.append((doc_id, f"""
-# {doc['title']} (Del mismo tema que otros resultados)
-
 {doc['content']}
 """))
             
@@ -320,7 +344,7 @@ async def retrieve_relevant_documentation(ctx: RunContext[AIDeps], user_query: s
         
         async def get_bm25_chunks(matched_ids):
             """
-            Recupera chunks usando BM25, utilizando información de Query Understanding si está disponible.
+            Recupera chunks usando BM25 con EXACTAMENTE los mismos filtros que match_pd_mex RPC.
             """
             start_time = time.time()
             logger.info(f"Ejecutando búsqueda léxica BM25 (complementaria)")
@@ -329,10 +353,39 @@ async def retrieve_relevant_documentation(ctx: RunContext[AIDeps], user_query: s
             
             try:
                 bm25_limit = 15
-                bm25_result = ctx.deps.supabase.table("pd_mex").select("id, title, summary, content").execute()
-                bm25_docs = bm25_result.data
+                # Incluir metadata en la consulta
+                bm25_result = ctx.deps.supabase.table("pd_mex").select("""
+                    id, title, summary, content, metadata""").execute()
                 
-                if bm25_docs:
+                # APLICAR EXACTAMENTE LA MISMA LÓGICA QUE LA FUNCIÓN RPC
+                filtered_docs = []
+                for doc in bm25_result.data:
+                    regulatory_doc = doc.get('regulatory_documents')
+                    doc_metadata = doc.get('metadata', {}) or {}  # Asegurar que no sea None
+                    chunk_status = doc_metadata.get('status')
+                    
+                    # EXACTAMENTE los mismos 3 casos que en match_pd_mex RPC
+                    is_vigente = (
+                        # Caso 1: Priorizar el status del documento principal si existe
+                        (regulatory_doc and regulatory_doc.get('status') == 'vigente') 
+                        or 
+                        # Caso 2: Si no hay documento principal, verificar status en metadata del chunk
+                        (regulatory_doc is None and chunk_status == 'vigente')
+                        or
+                        # Caso 3: Si no hay información de status en ningún lado, incluir el chunk
+                        (regulatory_doc is None and chunk_status is None)
+                    )
+                    
+                    if is_vigente:
+                        filtered_docs.append(doc)
+                    else:
+                        # Log para debug
+                        doc_status = regulatory_doc.get('status') if regulatory_doc else 'None'
+                        logger.debug(f"BM25 excluyó chunk {doc.get('id')}: doc_status={doc_status}, chunk_status={chunk_status}")
+                
+                logger.info(f"BM25: {len(bm25_result.data)} chunks iniciales → {len(filtered_docs)} chunks después del filtro de vigencia")
+                
+                if filtered_docs:
                     # Verificar NLTK
                     try:
                         nltk.data.find('tokenizers/punkt')
@@ -343,8 +396,16 @@ async def retrieve_relevant_documentation(ctx: RunContext[AIDeps], user_query: s
                     id_map = []
                     full_docs = []
                     
-                    for doc in bm25_docs:
-                        text = f"{doc.get('title', '')}\n{doc.get('content', '')}"
+                    for doc in filtered_docs:  # ← Usar filtered_docs en lugar de bm25_docs
+                        # Para BM25, usar el contenido completo incluyendo metadata
+                        text_parts = [
+                            doc.get('title', ''),
+                            doc.get('summary', ''),
+                            doc.get('content', ''),
+                            str(doc.get('metadata', ''))  # Convertir metadata a string para búsqueda
+                        ]
+                        text = ' '.join(filter(None, text_parts))  # Filtrar partes vacías
+                        
                         tokens = word_tokenize(text.lower())
                         corpus.append(tokens)
                         id_map.append(doc.get('id'))
@@ -352,7 +413,6 @@ async def retrieve_relevant_documentation(ctx: RunContext[AIDeps], user_query: s
                     
                     # Usar palabras clave de Query Understanding si están disponibles
                     if query_info and query_info.keywords:
-                        # Usar solo las palabras clave con importancia alta
                         important_keywords = [k.word for k in query_info.keywords if k.importance > 0.7]
                         if important_keywords:
                             logger.info(f"Usando palabras clave de alta importancia para BM25: {important_keywords}")
@@ -378,16 +438,19 @@ async def retrieve_relevant_documentation(ctx: RunContext[AIDeps], user_query: s
                                 summary_section = f"\nResumen: {summary}\n" if summary else ""
 
                                 bm25_text = f"""
-# {doc.get('title', '')} (Coincidencia de términos exactos)
-{summary_section}
-{doc.get('content', '')}
-"""
+        # {doc.get('title', '')} (Coincidencia de términos exactos)
+        {summary_section}
+        {doc.get('content', '')}
+        """
                                 bm25_chunks.append(bm25_text)
+                                logger.debug(f"BM25 incluyó chunk {doc_id} con score {scores[i]:.3f}")
                     
                     elapsed_time = time.time() - start_time
                     logger.info(f"Recuperados {len(bm25_chunks)} chunks adicionales con BM25 en {elapsed_time:.2f}s")
             except Exception as e:
                 logger.error(f"Error en la recuperación BM25: {e}")
+                import traceback
+                logger.error(f"Traceback: {traceback.format_exc()}")
                 elapsed_time = time.time() - start_time
                 logger.error(f"Tiempo hasta error BM25: {elapsed_time:.2f}s")
             
@@ -430,7 +493,7 @@ async def retrieve_relevant_documentation(ctx: RunContext[AIDeps], user_query: s
                 where_clause = " OR ".join(entity_conditions)
                 
                 # Ejecutar consulta en Supabase
-                entity_query = ctx.deps.supabase.table("pd_mex").select("id, title, summary, content").filter(where_clause, False).execute()
+                entity_query = ctx.deps.supabase.table("pd_mex").select("id, title, summary, content, article_references").filter(where_clause, False).execute()
                 
                 if entity_query.data:
                     for doc in entity_query.data:
@@ -606,3 +669,118 @@ Consulta utilizada para búsqueda: {search_query[:100]}..." if len(search_query)
         total_time = time.time() - start_time_total
         logger.error(f"Error retrieving documentation en {total_time:.2f}s: {e}")
         return f"Error retrieving documentation: {str(e)}"
+
+
+# ================== HERRAMIENTA DE GAP ANALYSIS SIMPLIFICADA ==================
+# Añadir esta herramienta a tu agente existente (ai_expert_v1.py)
+
+@ai_expert.tool
+async def perform_gap_analysis(ctx: RunContext[AIDeps], policy_text: str, focus_areas: Optional[str] = None) -> str:
+    """
+    Realiza un análisis GAP detallado entre una política interna y la normativa aplicable.
+    
+    Args:
+        policy_text: El texto completo de la política a evaluar
+        focus_areas: Áreas específicas a evaluar (opcional): "consentimiento, derechos ARCO, seguridad", etc.
+    
+    Returns:
+        Análisis GAP completo en formato Markdown con brechas identificadas y recomendaciones
+    """
+    logger.info("HERRAMIENTA INVOCADA: perform_gap_analysis")
+    
+    try:
+        # Construir consulta de búsqueda
+        search_query = "normativa protección datos privacidad requisitos obligatorios derechos seguridad"
+        if focus_areas:
+            search_query += f" {focus_areas}"
+        
+        logger.info(f"Recuperando documentación normativa para GAP analysis...")
+        
+        # Reutilizar COMPLETAMENTE la función existente
+        regulatory_docs = await retrieve_relevant_documentation(ctx, search_query)
+        
+        if not regulatory_docs or regulatory_docs == "No relevant documentation found.":
+            return "No se pudo recuperar documentación normativa suficiente para realizar el análisis GAP."
+        
+        # Prompt simplificado sin iconos
+        gap_prompt = f"""
+Realiza un análisis GAP profesional y detallado (mínimo 4.000 palabras) comparando la política interna con la normativa aplicable.
+
+POLÍTICA A EVALUAR:
+{policy_text[:8000]}
+
+NORMATIVA DE REFERENCIA:
+{regulatory_docs}
+
+ESTRUCTURA REQUERIDA:
+
+## Resumen Ejecutivo
+- Política evaluada: [Identificar tipo y alcance]
+- Total de brechas: [Número] (Alto: X, Medio: Y, Bajo: Z)
+- Nivel de cumplimiento: [Porcentaje estimado]
+- Recomendación principal: [Acción más crítica]
+
+## Análisis Detallado de Brechas
+
+### GAP-001: [Nombre descriptivo]
+- **Descripción:** [Qué no cumple la política]
+- **Requisito normativo:** [Artículo específico de la documentación]
+- **Estado actual:** [Cómo aborda este tema la política actual]
+- **Nivel de riesgo:** [Alto/Medio/Bajo] - [Justificación]
+- **Área impactada:** [Departamento/función]
+- **Recomendación:** [Acción específica con texto sugerido]
+- **Esfuerzo:** [Alto/Medio/Bajo] - [Justificación]
+
+[Continuar con GAP-002, GAP-003, etc. - MÍNIMO 8 brechas]
+
+## Matriz de Priorización
+
+| ID | Brecha | Riesgo | Esfuerzo | Prioridad | Plazo |
+|----|--------|--------|----------|-----------|--------|
+| GAP-001 | [Resumen] | Alto | Medio | 1 | 15 días |
+| GAP-002 | [Resumen] | Medio | Bajo | 2 | 30 días |
+
+## Plan de Implementación
+
+### Fase 1: Crítico (0-30 días)
+- [Brechas de alto riesgo con acciones específicas]
+
+### Fase 2: Importante (30-90 días)  
+- [Brechas de riesgo medio]
+
+### Fase 3: Mejoras (90+ días)
+- [Brechas de bajo riesgo y optimizaciones]
+
+## Métricas de Seguimiento
+- [KPIs específicos para medir progreso]
+
+INSTRUCCIONES CRÍTICAS:
+1. Identificar AL MENOS 8-10 brechas específicas
+2. Citar SOLO artículos presentes en la documentación normativa proporcionada
+3. Ser específico en recomendaciones (incluir texto exacto a añadir/modificar)
+4. Justificar cada nivel de riesgo con criterios objetivos
+5. Proporcionar estimaciones realistas de tiempo y esfuerzo
+6. Incluir consideraciones prácticas de implementación
+
+Enfócate en crear un análisis accionable y profesional.
+"""
+
+        # Ejecutar análisis
+        response = await ctx.deps.openai_client.chat.completions.create(
+            model=llm,
+            messages=[{"role": "user", "content": gap_prompt}],
+            temperature=0.1,
+            max_tokens=12000
+        )
+        
+        gap_result = response.choices[0].message.content
+        
+        # Añadir disclaimer simple
+        gap_result += "\n\n---\n\n*Este análisis GAP se basa exclusivamente en la documentación normativa consultada y no constituye asesoramiento legal definitivo.*"
+        
+        logger.info("GAP analysis completado exitosamente")
+        return gap_result
+        
+    except Exception as e:
+        logger.error(f"Error en análisis GAP: {e}")
+        return f"Error realizando análisis GAP: {str(e)}"

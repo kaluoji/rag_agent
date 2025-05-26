@@ -64,6 +64,27 @@ export const queryService = {
       throw error;
     }
   },
+
+  // Nuevo método para enviar consultas con documentos
+  submitQueryWithDocuments: async (queryText, documents = null) => {
+    try {
+      if (documents && documents.length > 0) {
+        // Usar el endpoint especializado para documentos
+        const response = await api.post('/api/query/with-documents', { 
+          query: queryText,
+          documents: documents
+        });
+        return response;
+      } else {
+        // Usar el endpoint normal si no hay documentos
+        const response = await api.post('/api/query', { query: queryText });
+        return response;
+      }
+    } catch (error) {
+      console.error('Error en la consulta con documentos:', error);
+      throw error;
+    }
+  },
 };
 
 // Servicio de gestión de reportes
@@ -283,3 +304,4 @@ export const createWebSocketConnection = () => {
     };
   }
 };
+
