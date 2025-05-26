@@ -775,12 +775,13 @@ Enfócate en crear un análisis accionable y profesional.
         
         gap_result = response.choices[0].message.content
         
+        # Verificar que tenemos contenido válido
+        if not gap_result or len(gap_result.strip()) < 50:
+            logger.error("GAP analysis produjo resultado vacío o muy corto")
+            return "Error: El análisis GAP no pudo generar un resultado completo. La documentación fue recuperada correctamente, pero el procesamiento final falló."
+        
         # Añadir disclaimer simple
         gap_result += "\n\n---\n\n*Este análisis GAP se basa exclusivamente en la documentación normativa consultada y no constituye asesoramiento legal definitivo.*"
         
-        logger.info("GAP analysis completado exitosamente")
+        logger.info(f"GAP analysis completado exitosamente. Longitud del resultado: {len(gap_result)} caracteres")
         return gap_result
-        
-    except Exception as e:
-        logger.error(f"Error en análisis GAP: {e}")
-        return f"Error realizando análisis GAP: {str(e)}"

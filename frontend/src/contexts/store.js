@@ -28,20 +28,23 @@ export const useQueryStore = create((set, get) => ({
   setError: (error) => set({ error, isLoading: false }),
   reset: () => set({ query: '', response: null, isLoading: false, error: null }),
   
-  // Add these new functions for managing query history
+  // Enhanced functions for managing query history
   addToHistory: (queryObj) => {
     const current = get().recentQueries;
     
-    // Create a query history object
+    // Create a query history object with better structure
     const newQueryHistory = {
-      id: queryObj.id || Date.now().toString(),
+      id: queryObj.id || Date.now().toString() + Math.random().toString(36).substr(2, 9),
       text: queryObj.text || get().query,
       timestamp: new Date().toISOString(),
-      response: queryObj.response
+      response: queryObj.response || get().response,
+      // Add metadata for better categorization
+      type: queryObj.type || (queryObj.text && queryObj.text.toLowerCase().includes('gap') ? 'gap_analysis' : 'consultation'),
+      hasDocuments: queryObj.hasDocuments || false
     };
     
-    // Add to the beginning of the array and keep only the most recent 20
-    const updated = [newQueryHistory, ...current.filter(q => q.id !== newQueryHistory.id)].slice(0, 20);
+    // Add to the beginning of the array and keep only the most recent 50
+    const updated = [newQueryHistory, ...current.filter(q => q.id !== newQueryHistory.id)].slice(0, 50);
     
     set({ recentQueries: updated });
     
@@ -53,16 +56,70 @@ export const useQueryStore = create((set, get) => ({
     }
   },
   
-  // Load recent queries from localStorage on initialization
+  // Enhanced function to load stored queries
   loadStoredQueries: () => {
     try {
       const stored = localStorage.getItem('recentQueries');
       if (stored) {
-        set({ recentQueries: JSON.parse(stored) });
+        const queries = JSON.parse(stored);
+        // Validate the structure of loaded queries
+        const validQueries = queries.filter(q => 
+          q && 
+          q.id && 
+          q.text && 
+          q.timestamp
+        );
+        set({ recentQueries: validQueries });
       }
     } catch (e) {
       console.error('Failed to load queries from localStorage', e);
+      // Clear corrupted data
+      localStorage.removeItem('recentQueries');
+      set({ recentQueries: [] });
     }
+  },
+  
+  // New function to get a specific query by ID
+  getQueryById: (id) => {
+    const queries = get().recentQueries;
+    return queries.find(q => q.id === id) || null;
+  },
+  
+  // New function to remove a specific query
+  removeQueryFromHistory: (id) => {
+    const current = get().recentQueries;
+    const updated = current.filter(q => q.id !== id);
+    
+    set({ recentQueries: updated });
+    
+    // Update localStorage
+    try {
+      localStorage.setItem('recentQueries', JSON.stringify(updated));
+    } catch (e) {
+      console.error('Failed to update localStorage after removing query', e);
+    }
+  },
+  
+  // New function to clear all history
+  clearAllHistory: () => {
+    set({ recentQueries: [] });
+    try {
+      localStorage.removeItem('recentQueries');
+    } catch (e) {
+      console.error('Failed to clear localStorage', e);
+    }
+  },
+  
+  // New function to search within history
+  searchInHistory: (searchTerm) => {
+    const queries = get().recentQueries;
+    if (!searchTerm.trim()) return queries;
+    
+    const term = searchTerm.toLowerCase();
+    return queries.filter(q => 
+      q.text.toLowerCase().includes(term) ||
+      (q.response && q.response.toLowerCase().includes(term))
+    );
   },
 }))
 

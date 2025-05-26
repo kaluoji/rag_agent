@@ -1,6 +1,3 @@
-// Modificamos la configuración del Box que contiene la lista
-// Cambio principal: eliminar overflow: 'auto' y ajustar la estructura para que no necesite scroll
-
 import React, { useState, useEffect } from 'react';
 import { Link as RouterLink, useLocation } from 'react-router-dom';
 import {
@@ -32,6 +29,7 @@ import NewReleasesIcon from '@mui/icons-material/NewReleases';
 import QuestionAnswerIcon from '@mui/icons-material/QuestionAnswer';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
+import ViewListIcon from '@mui/icons-material/ViewList';
 import logoImg from '../assets/agentia2.png';
 import { useQueryStore } from '../contexts/store';
 
@@ -84,16 +82,39 @@ const AppLayout = ({ children }) => {
       onClick: toggleHistory,
       expandable: true,
       expanded: historyOpen,
-      subItems: recentQueries?.slice(0, 5).map((query, index) => ({
-        text: query.text?.length > 30 ? `${query.text.substring(0, 30)}...` : query.text || `Consulta ${index + 1}`,
-        path: `/consulta/${query.id}`,
-        timestamp: query.timestamp,
-        active: location.pathname === `/consulta/${query.id}`
-      })) || []
+      // Add a "View All" option and then the recent queries
+      subItems: [
+        {
+          text: 'Ver todo el historial',
+          path: '/historial',
+          icon: <ViewListIcon />,
+          active: isActive('/historial'),
+          isViewAll: true
+        },
+        ...recentQueries?.slice(0, 5).map((query, index) => ({
+          text: query.text?.length > 30 ? `${query.text.substring(0, 30)}...` : query.text || `Consulta ${index + 1}`,
+          path: `/consulta/${query.id}`,
+          timestamp: query.timestamp,
+          active: location.pathname === `/consulta/${query.id}`,
+          type: query.type
+        })) || []
+      ]
     }
   ];
 
-  // The sidebar component - MODIFICADO para centrar verticalmente el contenido
+  // Function to get type icon for query
+  const getQueryTypeIcon = (type) => {
+    switch (type) {
+      case 'gap_analysis':
+        return '📊';
+      case 'consultation':
+        return '💬';
+      default:
+        return '❓';
+    }
+  };
+
+  // The sidebar component
   const sidebar = (
     <Box
       sx={{ 
@@ -157,27 +178,54 @@ const AppLayout = ({ children }) => {
                           component={RouterLink}
                           to={subItem.path}
                           sx={{
-                            pl: 4,
-                            py: 0.5,
+                            pl: subItem.isViewAll ? 4 : 5,
+                            py: subItem.isViewAll ? 1 : 0.5,
                             borderRadius: '8px',
                             backgroundColor: subItem.active ? 'rgba(77, 10, 46, 0.08)' : 'transparent',
                             color: subItem.active ? 'primary.main' : 'text.secondary',
                             '&:hover': {
                               backgroundColor: 'rgba(77, 10, 46, 0.04)',
-                            }
+                            },
+                            // Special styling for "View All" option
+                            ...(subItem.isViewAll && {
+                              borderBottom: '1px solid rgba(0, 0, 0, 0.08)',
+                              mb: 1,
+                              fontWeight: 500
+                            })
                           }}
                         >
+                          {subItem.isViewAll && (
+                            <ListItemIcon sx={{ minWidth: '32px' }}>
+                              {subItem.icon}
+                            </ListItemIcon>
+                          )}
                           <ListItemText 
-                            primary={subItem.text} 
-                            secondary={subItem.timestamp ? new Date(subItem.timestamp).toLocaleDateString() : null}
+                            primary={
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                {!subItem.isViewAll && subItem.type && (
+                                  <Typography component="span" sx={{ fontSize: '0.8rem' }}>
+                                    {getQueryTypeIcon(subItem.type)}
+                                  </Typography>
+                                )}
+                                <Typography
+                                  component="span"
+                                  variant={subItem.isViewAll ? 'body2' : 'body2'}
+                                  sx={{ 
+                                    fontWeight: subItem.isViewAll ? 500 : 400,
+                                    fontSize: subItem.isViewAll ? '0.875rem' : '0.8rem'
+                                  }}
+                                >
+                                  {subItem.text}
+                                </Typography>
+                              </Box>
+                            }
+                            secondary={!subItem.isViewAll && subItem.timestamp ? new Date(subItem.timestamp).toLocaleDateString() : null}
                             primaryTypographyProps={{ 
-                              variant: 'body2',
-                              fontWeight: subItem.active ? 500 : 400,
-                              fontSize: '0.875rem'
+                              fontWeight: subItem.active ? 500 : 400
                             }}
                             secondaryTypographyProps={{
                               variant: 'caption',
-                              fontSize: '0.75rem'
+                              fontSize: '0.7rem'
                             }}
                           />
                         </ListItem>
@@ -258,7 +306,7 @@ const AppLayout = ({ children }) => {
         {sidebar}
       </Drawer>
 
-      {/* Permanent sidebar for desktop - MODIFICADO */}
+      {/* Permanent sidebar for desktop */}
       {!isMobile && (
         <Drawer
           variant="permanent"
@@ -297,8 +345,6 @@ const AppLayout = ({ children }) => {
       >
         {children}
       </Box>
-
-      
     </Box>
   );
 };
