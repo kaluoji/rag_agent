@@ -109,7 +109,8 @@ class ReportService:
                 query=query,
                 analysis_data=response,
                 deps=self.report_deps,
-                format_type="word"  # Siempre usamos Word como formato base
+                template_name="Template_Regulatory_Report_AgentIA.docx",
+                regulation_name=None
             )
             
             # Actualizar la información del reporte

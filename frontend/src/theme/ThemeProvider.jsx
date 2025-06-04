@@ -1,4 +1,4 @@
-// frontend/src/theme/ThemeProvider.jsx
+// frontend/src/theme/ThemeProvider.jsx - MODIFICADO
 import React from 'react';
 import { ThemeProvider as MuiThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
@@ -40,7 +40,6 @@ const theme = createTheme({
       secondary: '#546e7a',
     },
   },
-  // Rest of your theme properties remain the same
   typography: {
     fontFamily: '"Roboto", "Helvetica", "Arial", sans-serif',
     h1: {
@@ -105,11 +104,30 @@ const theme = createTheme({
         },
       },
     },
+    // MODIFICACIÓN PRINCIPAL: AppBar más estrecho
     MuiAppBar: {
       styleOverrides: {
         root: {
-          backgroundColor: '#4D0A2E', // Ensure AppBar uses burgundy
+          backgroundColor: '#4D0A2E',
           boxShadow: '0px 1px 4px rgba(0, 0, 0, 0.1)',
+          // Forzar altura reducida
+          minHeight: '48px',
+          height: '48px',
+        },
+      },
+    },
+    // NUEVO: Estilo para Toolbar más estrecho
+    MuiToolbar: {
+      styleOverrides: {
+        root: {
+          minHeight: '48px !important',
+          height: '48px',
+          paddingTop: '8px',
+          paddingBottom: '8px',
+          '@media (min-width: 600px)': {
+            minHeight: '48px !important',
+            height: '48px',
+          },
         },
       },
     },

@@ -28,6 +28,7 @@ class Settings(BaseSettings):
     
     # Configuración de directorios
     REPORTS_DIR: str = os.path.join(BASE_DIR, "output", "reports")
+    TEMPLATES_DIR: str = os.path.join(BASE_DIR, "templates")
     STATIC_DIR: str = os.path.join(BASE_DIR, "static")
     MAX_REPORT_GENERATION_TIME: int = 300
 

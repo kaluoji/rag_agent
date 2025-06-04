@@ -15,6 +15,7 @@ from app.core.config import settings
 from agents.ai_expert_v1 import ai_expert, AIDeps, debug_run_agent
 from agents.understanding_query import process_query as process_query_understanding, QueryUnderstandingDeps, QueryInfo
 from agents.report_agent import report_agent, ReportDeps, process_report_query
+from agents.web_scraping_agent import scrape_regulations, WebScrapingDeps
 #from agents.risk_assessment_agent import risk_assessment_agent, RiskAssessmentDeps
 #from agents.normative_report_agent import normative_report_agent, ReportDeps as NormativeReportDeps, process_report_query
 
@@ -34,6 +35,7 @@ class AgentType(str, Enum):
     COMPLIANCE = "compliance"
     QUERY_UNDERSTANDING = "query_understanding"
     REPORT = "report"
+    WEB_SCRAPING = "web_scraping"
     #RISK_ASSESSMENT = "risk_assessment"
     #NORMATIVE_REPORT = "normative_report"
     
@@ -95,6 +97,14 @@ Agentes disponibles:
    - Útil cuando el usuario solicita explícitamente un informe o documento 
    - Necesita trabajar con COMPLIANCE para obtener el contenido regulatorio
    - Genera documentos estructurados con secciones estándar (introducción, alcance, análisis, etc.)
+
+4. WEB_SCRAPING
+   - Especializado en extraer información actualizada de sitios web regulatorios
+   - Útil cuando el usuario solicita información sobre las últimas regulaciones, guidelines o actualizaciones
+   - Usa este agente cuando detectes palabras clave como:
+     * "novedades", "actualizaciones recientes"
+     * "guidelines vigentes", "normativa actual"
+     * Referencias específicas a sitios web regulatorios
 
 Para cada consulta, debes determinar:
 1. Si se requiere un análisis previo con QUERY_UNDERSTANDING
@@ -226,8 +236,7 @@ async def execute_orchestration_plan(plan: OrchestratorPlan, query: str, deps: O
         report_result = await process_report_query(
             query=effective_query,
             analysis_data=compliance_response.data,
-            deps=report_deps,
-            format_type="word"  # Forzamos el formato Word siempre
+            deps=report_deps
         )
         
         # Preparar respuesta apropiada

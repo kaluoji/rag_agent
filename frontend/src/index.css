@@ -332,7 +332,7 @@ form:focus-within .send-button:not(:disabled) {
 
 /* Ocultar scrollbar en la página principal cuando no es necesario */
 html, body {
-  overflow: hidden;
+  overflow: visible;
   height: 100%;
   margin: 0;
   padding: 0;
@@ -353,7 +353,7 @@ html, body {
 /* Hacer que el container principal de la aplicación ocupe todo el espacio disponible sin scroll */
 #root {
   height: 100vh;
-  overflow: hidden;
+  overflow: visible;
   display: flex;
   flex-direction: column;
 }
@@ -438,4 +438,77 @@ html, body {
   .markdown-content td {
     padding: 8px 12px;
   }
+}
+
+/* NEW: Specific container for the main chat page */
+.chat-page-container {
+  height: 100vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* NEW: Container for pages that need scrolling (like history) */
+.scrollable-page-container {
+  min-height: calc(100vh - 64px); /* Account for AppBar height */
+  overflow: visible;
+  display: flex;
+  flex-direction: column;
+}
+
+/* NEW: Fix for icon overlap issues in lists */
+.MuiListItem-root {
+  position: relative;
+}
+
+.MuiListItemSecondaryAction-root {
+  position: absolute;
+  right: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 2; /* Ensure buttons appear above text */
+}
+
+
+/* Ajustes específicos para el header más estrecho */
+.MuiAppBar-root {
+  height: 48px !important;
+  min-height: 48px !important;
+}
+
+.MuiToolbar-root {
+  min-height: 48px !important;
+  height: 48px !important;
+  padding-top: 8px !important;
+  padding-bottom: 8px !important;
+}
+
+/* Asegurar que el logo se centre correctamente en el header más pequeño */
+.MuiToolbar-root img {
+  height: 70px !important;
+  max-height: 70px !important;
+}
+
+/* Ajustar el botón del menú móvil para que se vea bien en el header más pequeño */
+.MuiAppBar-root .MuiIconButton-root {
+  padding: 8px !important;
+}
+
+/* Ajustes para el contenido principal con el nuevo header */
+.app-container {
+  padding-top: 48px !important; /* Ajustar según la nueva altura del header */
+}
+
+/* Responsive: mantener altura reducida en todas las pantallas */
+@media (min-width: 600px) {
+  .MuiToolbar-root {
+    min-height: 48px !important;
+    height: 48px !important;
+  }
+}
+
+/* Ajuste específico para el drawer en desktop */
+.MuiDrawer-paper {
+  top: 48px !important;
+  height: calc(100% - 48px) !important;
 }

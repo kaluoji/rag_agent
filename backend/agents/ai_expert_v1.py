@@ -190,7 +190,7 @@ async def get_cluster_chunks(ctx, cluster_ids, matched_ids):
         logger.info(f"Buscando chunks adicionales para el cluster_id={cluster_id}")
         try:
             cluster_result = ctx.deps.supabase.rpc(
-                'match_pd_mex_by_cluster',
+                'match_pd_peru_by_cluster',
                 {
                     'cluster_id': cluster_id,
                     'match_count': 5
@@ -304,7 +304,7 @@ async def retrieve_relevant_documentation(ctx: RunContext[AIDeps], user_query: s
             logger.info(f"Buscando chunks por similitud vectorial (match_count={MAX_CHUNKS_RETURNED})")
             try:
                 result = ctx.deps.supabase.rpc(
-                    'match_pd_mex',
+                    'match_pd_peru',
                     {
                         'query_embedding': query_embedding,
                         'match_count': MAX_CHUNKS_RETURNED
@@ -344,7 +344,7 @@ async def retrieve_relevant_documentation(ctx: RunContext[AIDeps], user_query: s
         
         async def get_bm25_chunks(matched_ids):
             """
-            Recupera chunks usando BM25 con EXACTAMENTE los mismos filtros que match_pd_mex RPC.
+            Recupera chunks usando BM25 con EXACTAMENTE los mismos filtros que match_pd_peru RPC.
             """
             start_time = time.time()
             logger.info(f"Ejecutando búsqueda léxica BM25 (complementaria)")
@@ -354,7 +354,7 @@ async def retrieve_relevant_documentation(ctx: RunContext[AIDeps], user_query: s
             try:
                 bm25_limit = 15
                 # Incluir metadata en la consulta
-                bm25_result = ctx.deps.supabase.table("pd_mex").select("""
+                bm25_result = ctx.deps.supabase.table("pd_peru").select("""
                     id, title, summary, content, metadata""").execute()
                 
                 # APLICAR EXACTAMENTE LA MISMA LÓGICA QUE LA FUNCIÓN RPC
@@ -364,7 +364,7 @@ async def retrieve_relevant_documentation(ctx: RunContext[AIDeps], user_query: s
                     doc_metadata = doc.get('metadata', {}) or {}  # Asegurar que no sea None
                     chunk_status = doc_metadata.get('status')
                     
-                    # EXACTAMENTE los mismos 3 casos que en match_pd_mex RPC
+                    # EXACTAMENTE los mismos 3 casos que en match_pd_peru RPC
                     is_vigente = (
                         # Caso 1: Priorizar el status del documento principal si existe
                         (regulatory_doc and regulatory_doc.get('status') == 'vigente') 
@@ -493,7 +493,7 @@ async def retrieve_relevant_documentation(ctx: RunContext[AIDeps], user_query: s
                 where_clause = " OR ".join(entity_conditions)
                 
                 # Ejecutar consulta en Supabase
-                entity_query = ctx.deps.supabase.table("pd_mex").select("id, title, summary, content, article_references").filter(where_clause, False).execute()
+                entity_query = ctx.deps.supabase.table("pd_peru").select("id, title, summary, content, article_references").filter(where_clause, False).execute()
                 
                 if entity_query.data:
                     for doc in entity_query.data:
@@ -785,3 +785,7 @@ Enfócate en crear un análisis accionable y profesional.
         
         logger.info(f"GAP analysis completado exitosamente. Longitud del resultado: {len(gap_result)} caracteres")
         return gap_result
+
+    except Exception as e:
+        logger.error(f"Error en perform_gap_analysis: {str(e)}")
+        return f"Error al realizar el análisis GAP: {str(e)}"

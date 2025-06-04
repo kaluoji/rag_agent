@@ -78,10 +78,43 @@ const HistorialPage = () => {
     }
   };
 
-  // Función para truncar texto
+  // Fixed truncateText function that safely handles all data types
   const truncateText = (text, maxLength = 150) => {
-    if (text.length <= maxLength) return text;
-    return text.substring(0, maxLength) + '...';
+    // Handle null, undefined, or falsy values
+    if (!text) {
+      return 'Sin contenido disponible';
+    }
+    
+    // Convert non-string values to strings safely
+    let textString;
+    if (typeof text === 'string') {
+      textString = text;
+    } else if (typeof text === 'object') {
+      // Handle objects by converting to JSON or extracting meaningful text
+      try {
+        // If it's an object with a 'response' property, use that
+        if (text.response && typeof text.response === 'string') {
+          textString = text.response;
+        } else if (text.text && typeof text.text === 'string') {
+          textString = text.text;
+        } else {
+          // Convert object to JSON string as fallback
+          textString = JSON.stringify(text);
+        }
+      } catch (error) {
+        textString = 'Contenido no disponible';
+      }
+    } else {
+      // Convert other types (numbers, booleans, etc.) to strings
+      textString = String(text);
+    }
+    
+    // Now safely truncate the string
+    if (textString.length <= maxLength) {
+      return textString;
+    }
+    
+    return textString.substring(0, maxLength) + '...';
   };
 
   // Función para eliminar una consulta específica
@@ -155,199 +188,204 @@ const HistorialPage = () => {
   };
 
   return (
-    <Container maxWidth="lg" sx={{ py: 4 }}>
-      {/* Cabecera */}
-      <Box sx={{ mb: 4 }}>
-        <Typography variant="h4" gutterBottom>
-          Historial de Consultas
-        </Typography>
-        <Typography variant="body1" color="text.secondary">
-          Revisa y gestiona tus consultas anteriores
-        </Typography>
-      </Box>
-
-      {/* Barra de búsqueda y acciones */}
-      <Paper elevation={1} sx={{ p: 3, mb: 3 }}>
-        <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
-          <TextField
-            placeholder="Buscar en el historial..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <SearchIcon color="action" />
-                </InputAdornment>
-              ),
-            }}
-            sx={{ flexGrow: 1, minWidth: '300px' }}
-            variant="outlined"
-            size="small"
-          />
-          
-          <Button
-            variant="outlined"
-            color="error"
-            startIcon={<ClearAllIcon />}
-            onClick={handleClearAll}
-            disabled={recentQueries.length === 0}
-            size="small"
-          >
-            Limpiar Todo
-          </Button>
+    // Use the scrollable page container class
+    <Box className="scrollable-page-container">
+      <Container maxWidth="lg" className="history-page-content" sx={{ py: 4 }}>
+        {/* Cabecera */}
+        <Box sx={{ mb: 4 }}>
+          <Typography variant="h4" gutterBottom>
+            Historial de Consultas
+          </Typography>
+          <Typography variant="body1" color="text.secondary">
+            Revisa y gestiona tus consultas anteriores
+          </Typography>
         </Box>
-        
-        <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
-          {filteredQueries.length} de {recentQueries.length} consultas
-        </Typography>
-      </Paper>
 
-      {/* Lista de consultas */}
-      {filteredQueries.length === 0 ? (
-        <Paper elevation={1} sx={{ p: 4, textAlign: 'center' }}>
-          {recentQueries.length === 0 ? (
-            <Alert severity="info">
-              No tienes consultas en tu historial aún. ¡Comienza haciendo tu primera consulta!
-            </Alert>
-          ) : (
-            <Alert severity="info">
-              No se encontraron consultas que coincidan con tu búsqueda.
-            </Alert>
-          )}
+        {/* Barra de búsqueda y acciones */}
+        <Paper elevation={1} sx={{ p: 3, mb: 3 }}>
+          <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
+            <TextField
+              placeholder="Buscar en el historial..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon color="action" />
+                  </InputAdornment>
+                ),
+              }}
+              sx={{ flexGrow: 1, minWidth: '300px' }}
+              variant="outlined"
+              size="small"
+            />
+            
+            <Button
+              variant="outlined"
+              color="error"
+              startIcon={<ClearAllIcon />}
+              onClick={handleClearAll}
+              disabled={recentQueries.length === 0}
+              size="small"
+            >
+              Limpiar Todo
+            </Button>
+          </Box>
           
-          <Button 
-            variant="contained"
-            onClick={() => navigate('/')}
-            sx={{ mt: 2 }}
-          >
-            Hacer Nueva Consulta
-          </Button>
+          <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+            {filteredQueries.length} de {recentQueries.length} consultas
+          </Typography>
         </Paper>
-      ) : (
-        <Paper elevation={1}>
-          <List>
-            {filteredQueries.map((query, index) => {
-              const queryType = getQueryType(query.text);
-              
-              return (
-                <React.Fragment key={query.id}>
-                  <ListItem
-                    sx={{
-                      cursor: 'pointer',
-                      '&:hover': {
-                        backgroundColor: 'action.hover',
-                      },
-                    }}
-                  >
-                    <ListItemText
-                      primary={
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                          <Typography variant="subtitle1" sx={{ flexGrow: 1 }}>
-                            {truncateText(query.text, 80)}
-                          </Typography>
-                          <Chip 
-                            label={queryType.label} 
-                            color={queryType.color}
-                            size="small" 
-                            variant="outlined"
-                          />
+
+        {/* Lista de consultas */}
+        {filteredQueries.length === 0 ? (
+          <Paper elevation={1} sx={{ p: 4, textAlign: 'center' }}>
+            {recentQueries.length === 0 ? (
+              <Alert severity="info">
+                No tienes consultas en tu historial aún. ¡Comienza haciendo tu primera consulta!
+              </Alert>
+            ) : (
+              <Alert severity="info">
+                No se encontraron consultas que coincidan con tu búsqueda.
+              </Alert>
+            )}
+            
+            <Button 
+              variant="contained"
+              onClick={() => navigate('/')}
+              sx={{ mt: 2 }}
+            >
+              Hacer Nueva Consulta
+            </Button>
+          </Paper>
+        ) : (
+          <Paper elevation={1}>
+            <List>
+              {filteredQueries.map((query, index) => {
+                const queryType = getQueryType(query.text);
+                
+                return (
+                  <React.Fragment key={query.id}>
+                    <ListItem
+                      sx={{
+                        cursor: 'pointer',
+                        '&:hover': {
+                          backgroundColor: 'action.hover',
+                        },
+                        position: 'relative', // Ensure proper positioning
+                        pr: 12, // Add right padding to make room for action buttons
+                      }}
+                    >
+                      <ListItemText
+                        primary={
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1, pr: 1 }}>
+                            <Typography variant="subtitle1" sx={{ flexGrow: 1 }}>
+                              {truncateText(query.text, 80)}
+                            </Typography>
+                            <Chip 
+                              label={queryType.label} 
+                              color={queryType.color}
+                              size="small" 
+                              variant="outlined"
+                            />
+                          </Box>
+                        }
+                        secondary={
+                          <Box>
+                            <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                              {query.response ? truncateText(query.response, 200) : 'Sin respuesta disponible'}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              {formatDate(query.timestamp)}
+                            </Typography>
+                          </Box>
+                        }
+                        onClick={() => navigate(`/consulta/${query.id}`)}
+                      />
+                      
+                      <ListItemSecondaryAction>
+                        <Box sx={{ display: 'flex', gap: 0.5 }}>
+                          <IconButton
+                            size="small"
+                            onClick={() => navigate(`/consulta/${query.id}`)}
+                            title="Ver consulta completa"
+                          >
+                            <VisibilityIcon fontSize="small" />
+                          </IconButton>
+                          
+                          <IconButton
+                            size="small"
+                            onClick={() => handleShareQuery(query)}
+                            title="Compartir consulta"
+                          >
+                            <ShareIcon fontSize="small" />
+                          </IconButton>
+                          
+                          <IconButton
+                            size="small"
+                            onClick={() => handleDeleteQuery(query.id)}
+                            title="Eliminar consulta"
+                            color="error"
+                          >
+                            <DeleteIcon fontSize="small" />
+                          </IconButton>
                         </Box>
-                      }
-                      secondary={
-                        <Box>
-                          <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
-                            {query.response ? truncateText(query.response, 200) : 'Sin respuesta disponible'}
-                          </Typography>
-                          <Typography variant="caption" color="text.secondary">
-                            {formatDate(query.timestamp)}
-                          </Typography>
-                        </Box>
-                      }
-                      onClick={() => navigate(`/consulta/${query.id}`)}
-                    />
+                      </ListItemSecondaryAction>
+                    </ListItem>
                     
-                    <ListItemSecondaryAction>
-                      <Box sx={{ display: 'flex', gap: 0.5 }}>
-                        <IconButton
-                          size="small"
-                          onClick={() => navigate(`/consulta/${query.id}`)}
-                          title="Ver consulta completa"
-                        >
-                          <VisibilityIcon fontSize="small" />
-                        </IconButton>
-                        
-                        <IconButton
-                          size="small"
-                          onClick={() => handleShareQuery(query)}
-                          title="Compartir consulta"
-                        >
-                          <ShareIcon fontSize="small" />
-                        </IconButton>
-                        
-                        <IconButton
-                          size="small"
-                          onClick={() => handleDeleteQuery(query.id)}
-                          title="Eliminar consulta"
-                          color="error"
-                        >
-                          <DeleteIcon fontSize="small" />
-                        </IconButton>
-                      </Box>
-                    </ListItemSecondaryAction>
-                  </ListItem>
-                  
-                  {index < filteredQueries.length - 1 && <Divider />}
-                </React.Fragment>
-              );
-            })}
-          </List>
-        </Paper>
-      )}
+                    {index < filteredQueries.length - 1 && <Divider />}
+                  </React.Fragment>
+                );
+              })}
+            </List>
+          </Paper>
+        )}
 
-      {/* Dialog de confirmación para eliminar consulta específica */}
-      <Dialog open={confirmDeleteOpen} onClose={() => setConfirmDeleteOpen(false)}>
-        <DialogTitle>Confirmar Eliminación</DialogTitle>
-        <DialogContent>
-          <Typography>
-            ¿Estás seguro de que quieres eliminar esta consulta? Esta acción no se puede deshacer.
-          </Typography>
-          {queryToDelete && (
-            <Paper sx={{ p: 2, mt: 2, bgcolor: 'background.default' }}>
-              <Typography variant="body2" fontWeight="medium">
-                {truncateText(queryToDelete.text, 100)}
-              </Typography>
-            </Paper>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setConfirmDeleteOpen(false)}>
-            Cancelar
-          </Button>
-          <Button onClick={confirmDeleteQuery} color="error" variant="contained">
-            Eliminar
-          </Button>
-        </DialogActions>
-      </Dialog>
+        {/* Dialog de confirmación para eliminar consulta específica */}
+        <Dialog open={confirmDeleteOpen} onClose={() => setConfirmDeleteOpen(false)}>
+          <DialogTitle>Confirmar Eliminación</DialogTitle>
+          <DialogContent>
+            <Typography>
+              ¿Estás seguro de que quieres eliminar esta consulta? Esta acción no se puede deshacer.
+            </Typography>
+            {queryToDelete && (
+              <Paper sx={{ p: 2, mt: 2, bgcolor: 'background.default' }}>
+                <Typography variant="body2" fontWeight="medium">
+                  {truncateText(queryToDelete.text, 100)}
+                </Typography>
+              </Paper>
+            )}
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setConfirmDeleteOpen(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={confirmDeleteQuery} color="error" variant="contained">
+              Eliminar
+            </Button>
+          </DialogActions>
+        </Dialog>
 
-      {/* Dialog de confirmación para limpiar todo */}
-      <Dialog open={confirmClearAllOpen} onClose={() => setConfirmClearAllOpen(false)}>
-        <DialogTitle>Limpiar Todo el Historial</DialogTitle>
-        <DialogContent>
-          <Typography>
-            ¿Estás seguro de que quieres eliminar todo tu historial de consultas? 
-            Esta acción eliminará permanentemente todas las consultas guardadas y no se puede deshacer.
-          </Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setConfirmClearAllOpen(false)}>
-            Cancelar
-          </Button>
-          <Button onClick={confirmClearAll} color="error" variant="contained">
-            Limpiar Todo
-          </Button>
-        </DialogActions>
-      </Dialog>
-    </Container>
+        {/* Dialog de confirmación para limpiar todo */}
+        <Dialog open={confirmClearAllOpen} onClose={() => setConfirmClearAllOpen(false)}>
+          <DialogTitle>Limpiar Todo el Historial</DialogTitle>
+          <DialogContent>
+            <Typography>
+              ¿Estás seguro de que quieres eliminar todo tu historial de consultas? 
+              Esta acción eliminará permanentemente todas las consultas guardadas y no se puede deshacer.
+            </Typography>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setConfirmClearAllOpen(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={confirmClearAll} color="error" variant="contained">
+              Limpiar Todo
+            </Button>
+          </DialogActions>
+        </Dialog>
+      </Container>
+    </Box>
   );
 };
 

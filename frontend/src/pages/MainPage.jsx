@@ -86,12 +86,13 @@ const MainPage = () => {
 
   return (
     <Box 
+      className="chat-page-container"
       sx={{ 
         display: 'flex', 
         flexDirection: 'column',
-        height: 'calc(100vh - 64px)', // Altura total menos el AppBar
-        overflow: 'hidden',
-        bgcolor: '#f5f7fa'
+        height: 'calc(100vh - 64px)', 
+        overflow: 'hidden', 
+        bgcolor: '#f5f7fa' 
       }}
     >
       <Container 

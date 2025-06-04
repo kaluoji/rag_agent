@@ -1,3 +1,4 @@
+// frontend/src/layouts/AppLayout.jsx - MODIFICADO
 import React, { useState, useEffect } from 'react';
 import { Link as RouterLink, useLocation } from 'react-router-dom';
 import {
@@ -128,11 +129,10 @@ const AppLayout = ({ children }) => {
       onClick={isMobile ? toggleDrawer(false) : undefined}
       onKeyDown={isMobile ? toggleDrawer(false) : undefined}
     >
-      {/* Añadimos espacio superior para desplazar el contenido hacia abajo */}
-      <Box sx={{ pt: 10 }}></Box>
-      {/* Aplicamos padding superior adicional a la lista para centrar mejor el contenido */}
+      {/* AJUSTE: Reducir padding superior para compensar header más pequeño */}
+      <Box sx={{ pt: 6 }}></Box> {/* Reducido de pt: 10 a pt: 6 */}
       <Box sx={{ flexGrow: 1 }}>
-        <List component="nav" sx={{ p: 1, pt: 4 }}>
+        <List component="nav" sx={{ p: 1, pt: 2 }}> {/* Reducido de pt: 4 a pt: 2 */}
           {sidebarItems.map((item, index) => (
             <React.Fragment key={item.text}>
               <ListItem 
@@ -254,8 +254,21 @@ const AppLayout = ({ children }) => {
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
-      <AppBar position="fixed" sx={{ zIndex: (theme) => theme.zIndex.drawer + 1 }}>
-        <Toolbar>
+      {/* MODIFICACIÓN PRINCIPAL: AppBar más estrecho y sin menú superior derecho */}
+      <AppBar 
+        position="fixed" 
+        sx={{ 
+          zIndex: (theme) => theme.zIndex.drawer + 1,
+          // Personalizar altura del AppBar
+          '& .MuiToolbar-root': {
+            minHeight: '48px !important', // Reducido de 64px a 48px
+            height: '48px',
+            paddingTop: '8px',
+            paddingBottom: '8px'
+          }
+        }}
+      >
+        <Toolbar sx={{ minHeight: '48px !important', height: '48px' }}>
           {isMobile && (
             <IconButton
               edge="start"
@@ -263,6 +276,7 @@ const AppLayout = ({ children }) => {
               aria-label="menu"
               onClick={toggleDrawer(true)}
               sx={{ mr: 2 }}
+              size="small" // Botón más pequeño
             >
               <MenuIcon />
             </IconButton>
@@ -271,10 +285,16 @@ const AppLayout = ({ children }) => {
             <img 
               src={logoImg}
               alt="MINSAIT Logo" 
-              style={{ height: '65px', marginRight: '2px' }} 
+              style={{ 
+                height: '70px', // Reducido de 65px a 32px
+                marginRight: '2px',
+                marginTop: '5px'
+              }} 
             />
           </Box>
           <Box sx={{ flexGrow: 1 }} />
+          {/* ELIMINADO COMPLETAMENTE: El menú superior derecho */}
+          {/* 
           {!isMobile && (
             <Box>
               <Button color="inherit" component={RouterLink} to="/">
@@ -288,6 +308,7 @@ const AppLayout = ({ children }) => {
               </Button>
             </Box>
           )}
+          */}
         </Toolbar>
       </AppBar>
 
@@ -318,9 +339,9 @@ const AppLayout = ({ children }) => {
               boxSizing: 'border-box',
               borderRight: '1px solid rgba(0, 0, 0, 0.12)',
               zIndex: (theme) => theme.zIndex.drawer,
-              top: '64px', // Adjust based on your AppBar height
-              height: 'calc(100% - 64px)', // Adjust based on your AppBar height
-              overflowY: 'visible' // Cambio importante: evita el scrolling vertical
+              top: '48px', // AJUSTADO: de 64px a 48px
+              height: 'calc(100% - 48px)', // AJUSTADO: de 64px a 48px
+              overflowY: 'visible'
             },
           }}
           open
@@ -335,8 +356,8 @@ const AppLayout = ({ children }) => {
           flexGrow: 1,
           bgcolor: 'background.default',
           p: 3,
-          mt: '64px', // Adjust based on your AppBar height
-          ml: isMobile ? 0 : '280px', // Adjust for sidebar width
+          mt: '48px', // AJUSTADO: de 64px a 48px (altura del AppBar)
+          ml: isMobile ? 0 : '280px', // Ajustar para el ancho del sidebar
           transition: theme.transitions.create(['margin', 'width'], {
             easing: theme.transitions.easing.sharp,
             duration: theme.transitions.duration.leavingScreen,

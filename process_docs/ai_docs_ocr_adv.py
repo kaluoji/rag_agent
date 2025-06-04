@@ -1451,7 +1451,7 @@ Contenido del fragmento:
     
 async def insert_chunk(chunk: ProcessedChunk):
     """
-    Inserta el fragmento procesado en la tabla 'pd_mex' de Supabase.
+    Inserta el fragmento procesado en la tabla 'pd_peru' de Supabase.
     Si falla, guarda los datos localmente para procesamiento posterior.
     """
     try:
@@ -1466,7 +1466,7 @@ async def insert_chunk(chunk: ProcessedChunk):
             #"article_references": chunk.article_references,
             "document_id": chunk.document_id
         }
-        result = supabase.table("pd_mex").insert(data).execute()
+        result = supabase.table("pd_peru").insert(data).execute()
         logging.info(f"Inserted chunk {chunk.chunk_number} for {chunk.url}")
         return result
     except Exception as e:
